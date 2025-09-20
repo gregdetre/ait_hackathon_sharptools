@@ -79,7 +79,7 @@ class DiffPipelineCommand extends Command {
   quiet = Option.Boolean('--quiet,-q', false);
   useLlm = Option.Boolean('--use-llm', false);
   // LLM controls (only used when --use-llm)
-  model = Option.String('--model', 'claude-3-opus-20240229');
+  model = Option.String('--model', 'claude-opus-4.1');
   promptVersion = Option.String('--prompt-version', 'v1-llm');
   filterByExtensions = Option.String('--filter-by-extensions', { required: false });
 

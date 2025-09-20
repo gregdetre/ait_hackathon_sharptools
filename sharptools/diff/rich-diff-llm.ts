@@ -18,6 +18,7 @@ import { readFile, writeFile } from 'fs/promises';
 import { resolve, join } from 'path';
 import { config as dotenvConfig } from 'dotenv';
 import nunjucks from 'nunjucks';
+import { getModel as getChatModel } from '../config';
 import type { BasicDiff, RichDiff, RichItem, Cluster, Callout, EvidenceRef } from '../claude-conversation-exporter/types/diff-schemas';
 
 // Lazy import Anthropic to allow running without the package if not used
@@ -175,7 +176,7 @@ class RichDiffLlmCommand extends Command {
 
   inputFile = Option.String('--input,-i', { required: true, description: 'BasicDiff JSON path' });
   enrichmentFile = Option.String('--enrichment,-e', { required: false, description: 'Optional enrichment JSON path' });
-  model = Option.String('--model', 'claude-3-opus-20240229', { description: 'Anthropic model id' });
+  model = Option.String('--model', 'claude-opus-4.1', { description: 'Anthropic model id or alias (e.g. claude-opus-4.1)' });
   promptVersion = Option.String('--prompt-version', 'v1-llm', { description: 'Prompt version tag' });
   outputFile = Option.String('--output,-o', { required: true, description: 'Output RichDiff JSON path' });
   templatesDir = Option.String('--templates-dir', 'prompts/templates', { description: 'Directory containing .md.njk templates' });
@@ -202,6 +203,19 @@ class RichDiffLlmCommand extends Command {
       const env = configureNunjucks(resolve(this.templatesDir));
       const filterExts = parseExtensionsList(this.filterByExtensions);
 
+      // Resolve friendly alias → concrete API model; fall back to input if unknown
+      let providerForMeta = 'anthropic';
+      let modelNameForMeta = this.model;
+      let apiModel = this.model;
+      try {
+        const m: any = getChatModel(this.model);
+        if (m && m.apiModel) {
+          apiModel = String(m.apiModel);
+          modelNameForMeta = String(m.id || this.model);
+          providerForMeta = String(m.provider || 'anthropic');
+        }
+      } catch {/* ignore, keep raw */}
+
       // Pass A: per-hunk item extraction
       const passAItems: RichItem[] = [];
       const systemA = [
@@ -222,7 +236,7 @@ class RichDiffLlmCommand extends Command {
             hunk: hunkEn ? { symbolsNearChange: hunkEn.symbolsNearChange } : undefined,
           };
           const hints = { layer: fileEn?.layer };
-          const meta = { createdAtIso: nowIso(), model: { provider: 'anthropic', name: this.model }, promptVersion: this.promptVersion };
+          const meta = { createdAtIso: nowIso(), model: { provider: providerForMeta as any, name: modelNameForMeta }, promptVersion: this.promptVersion };
           const inputObj = { meta, file: f, hunk: h, tsEntities, hints };
           const rendered = env.render('pass_a_item_extraction.md.njk', {
             meta_json: JSON.stringify(meta),
@@ -232,7 +246,7 @@ class RichDiffLlmCommand extends Command {
             hints_json: JSON.stringify(hints),
           });
           try {
-            const a = await callAnthropicJSON(apiKey!, this.model, systemA, rendered, 4000);
+            const a = await callAnthropicJSON(apiKey!, apiModel, systemA, rendered, 4000);
             const items = ensureArray<any>(a.items);
             let idx = 0;
             for (const it of items) {
@@ -270,7 +284,7 @@ class RichDiffLlmCommand extends Command {
 
       const pathTags = Object.fromEntries((basic.files || []).map(f => [f.id, { layer: enrichment?.files?.[f.id]?.layer || 'unknown' }]));
       const totals = basic.totals;
-      const metaB = { createdAtIso: nowIso(), model: { provider: 'anthropic', name: this.model }, promptVersion: this.promptVersion };
+      const metaB = { createdAtIso: nowIso(), model: { provider: providerForMeta as any, name: modelNameForMeta }, promptVersion: this.promptVersion };
       const passBRendered = env.render('pass_b_clustering.md.njk', {
         meta_json: JSON.stringify(metaB),
         totals_json: JSON.stringify(totals),
@@ -281,7 +295,7 @@ class RichDiffLlmCommand extends Command {
       let clusters: Cluster[] = [];
       let summary: RichDiff['summary'] | null = null;
       try {
-        const b = await callAnthropicJSON(apiKey!, this.model, systemB, passBRendered, 4000);
+        const b = await callAnthropicJSON(apiKey!, apiModel, systemB, passBRendered, 4000);
         const rawClusters = ensureArray<any>(b.clusters);
         clusters = rawClusters.map((c: any, i: number) => ({
           id: c.id || `cl${i + 1}`,
@@ -335,7 +349,7 @@ class RichDiffLlmCommand extends Command {
             cluster_json: JSON.stringify(c),
             items_json: JSON.stringify(passAItems),
           });
-          const cr = await callAnthropicJSON(apiKey!, this.model, systemC, passCRendered, 1200);
+          const cr = await callAnthropicJSON(apiKey!, apiModel, systemC, passCRendered, 1200);
           const mermaid = (cr && typeof cr.mermaid !== 'undefined') ? cr.mermaid : null;
           finalClusters.push({ ...c, mermaid: typeof mermaid === 'string' ? mermaid : undefined });
         } catch (err: any) {
@@ -347,7 +361,7 @@ class RichDiffLlmCommand extends Command {
       const rich: RichDiff = {
         meta: {
           createdAtIso: nowIso(),
-          model: { provider: 'anthropic', name: this.model },
+          model: { provider: providerForMeta as any, name: modelNameForMeta },
           promptVersion: this.promptVersion,
           basicDiffRef: { hash: 'not-computed' },
           goalRef: { planningDocPath: 'planning/250920a_diff_visualizer_planning.md', goalSummary: 'Diff Visualizer MVP' },

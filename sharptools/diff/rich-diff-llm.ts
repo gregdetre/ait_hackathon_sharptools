@@ -116,6 +116,13 @@ function makeItemId(fileId: string, hunkId: string | undefined, index: number): 
   return `i_${fileId}${h}_${index}`;
 }
 
+function parseExtensionsList(input: string | undefined): Set<string> | null {
+  const raw = (input || '').trim();
+  if (!raw) return null;
+  const parts = raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean).map(s => s.replace(/^\./, ''));
+  return new Set(parts);
+}
+
 function heuristicFallback(basic: BasicDiff): RichDiff {
   const items: RichItem[] = [];
   const clusters: Cluster[] = [];
@@ -168,11 +175,12 @@ class RichDiffLlmCommand extends Command {
 
   inputFile = Option.String('--input,-i', { required: true, description: 'BasicDiff JSON path' });
   enrichmentFile = Option.String('--enrichment,-e', { required: false, description: 'Optional enrichment JSON path' });
-  model = Option.String('--model', 'claude-3-5-sonnet-20240620', { description: 'Anthropic model id' });
+  model = Option.String('--model', 'claude-3-opus-20240229', { description: 'Anthropic model id' });
   promptVersion = Option.String('--prompt-version', 'v1-llm', { description: 'Prompt version tag' });
   outputFile = Option.String('--output,-o', { required: true, description: 'Output RichDiff JSON path' });
   templatesDir = Option.String('--templates-dir', 'prompts/templates', { description: 'Directory containing .md.njk templates' });
   quiet = Option.Boolean('--quiet,-q', false, { description: 'Suppress non-essential errors' });
+  filterByExtensions = Option.String('--filter-by-extensions', { required: false, description: 'Comma-separated file extensions to include (default: include all non-binary files). Example: ts,tsx,md' });
 
   async execute(): Promise<number> {
     // Ensure env
@@ -192,6 +200,7 @@ class RichDiffLlmCommand extends Command {
       }
 
       const env = configureNunjucks(resolve(this.templatesDir));
+      const filterExts = parseExtensionsList(this.filterByExtensions);
 
       // Pass A: per-hunk item extraction
       const passAItems: RichItem[] = [];
@@ -201,8 +210,9 @@ class RichDiffLlmCommand extends Command {
       ].join(' ');
 
       for (const f of basic.files) {
-        const isTs = (f.language === 'ts' || f.language === 'tsx');
-        if (!isTs || f.isBinary) continue;
+        if (f.isBinary) continue;
+        const lang = String(f.language || '').toLowerCase();
+        if (filterExts && filterExts.size > 0 && !filterExts.has(lang)) continue;
         for (const h of f.hunks) {
           const fileEn = enrichment?.files?.[f.id];
           const hunkKey = `${f.id}|${h.id}`;

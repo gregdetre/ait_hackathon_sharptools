@@ -78,6 +78,9 @@ class DiffPipelineCommand extends Command {
   openFile = Option.Boolean('--open', false);
   quiet = Option.Boolean('--quiet,-q', false);
   useLlm = Option.Boolean('--use-llm', false);
+  // LLM controls (only used when --use-llm)
+  model = Option.String('--model', 'claude-3-opus-20240229');
+  promptVersion = Option.String('--prompt-version', 'v1-llm');
 
   async execute(): Promise<number> {
     const prefix = dtStamp();
@@ -122,6 +125,8 @@ class DiffPipelineCommand extends Command {
             'sharptools/diff/rich-diff-llm.ts',
             '-i', basicPath,
             '-e', enrichPath,
+            '--model', this.model,
+            '--prompt-version', this.promptVersion,
             '-o', richPath,
           ]
         : [

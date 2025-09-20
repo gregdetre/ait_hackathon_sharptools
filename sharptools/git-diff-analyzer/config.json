@@ -10,8 +10,11 @@
     "pollInterval": 2000
   },
   "llm": {
-    "enabled": false,
-    "promptsFolder": "./prompts"
+    "enabled": true,
+    "promptsFolder": "./prompts",
+    "model": "gpt-5",
+    "temperature": 0.1,
+    "maxCompletionTokens": 2000
   },
   "ui": {
     "showRawDiff": true,

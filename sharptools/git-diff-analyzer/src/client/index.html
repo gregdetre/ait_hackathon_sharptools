@@ -256,6 +256,19 @@
             border-radius: 6px;
             margin: 1rem 0;
             border: 1px solid #f5c6cb;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .error-message.llm-error {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffeaa7;
+        }
+
+        .error-message.llm-error::before {
+            content: "⚠️ ";
+            font-size: 1.2em;
         }
     </style>
 </head>
@@ -271,6 +284,7 @@
             const [analyses, setAnalyses] = useState([]);
             const [connectionStatus, setConnectionStatus] = useState('connecting');
             const [error, setError] = useState(null);
+            const [errorType, setErrorType] = useState(null);
             const [ws, setWs] = useState(null);
 
             useEffect(() => {
@@ -290,6 +304,7 @@
                 websocket.onmessage = (event) => {
                     try {
                         const message = JSON.parse(event.data);
+                        console.log('📨 Received WebSocket message:', message.type, message.data);
                         
                         switch (message.type) {
                             case 'diff-update':
@@ -300,8 +315,16 @@
                                 break;
                             case 'status-update':
                                 if (message.data.error) {
+                                    console.log('🚨 Setting general error:', message.data.error);
                                     setError(message.data.error);
+                                    setErrorType('general');
                                 }
+                                break;
+                            
+                            case 'llm-error':
+                                console.log('🚨 Setting LLM error:', message.data.error);
+                                setError(`LLM Processing Error: ${message.data.error}`);
+                                setErrorType('llm-error');
                                 break;
                         }
                     } catch (err) {
@@ -333,7 +356,7 @@
                 }
             }, [ws]);
 
-            return { diffData, analyses, connectionStatus, error, refresh };
+            return { diffData, analyses, connectionStatus, error, errorType, refresh };
         }
 
         // Analysis Panel Component
@@ -502,7 +525,7 @@
 
         // Main App Component
         function App() {
-            const { diffData, analyses, connectionStatus, error, refresh } = useGitDiffStream();
+            const { diffData, analyses, connectionStatus, error, errorType, refresh } = useGitDiffStream();
             const [isRefreshing, setIsRefreshing] = useState(false);
 
             const handleRefresh = async () => {
@@ -533,8 +556,9 @@
 
                     <main className="main-content">
                         {error && (
-                            <div className="error-message">
-                                Error: {error}
+                            <div className={`error-message ${errorType ? errorType : ''}`}>
+                                {console.log('🚨 Rendering error:', error, 'type:', errorType)}
+                                {error}
                             </div>
                         )}
 

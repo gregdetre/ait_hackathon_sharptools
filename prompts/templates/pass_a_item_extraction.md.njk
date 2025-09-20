@@ -1,0 +1,55 @@
+# RichDiff Pass A – Per-hunk Item Extraction
+
+You convert TypeScript diffs into concise, evidence-cited change items.
+
+Rules:
+- Output STRICT JSON matching the contract below. No extra text or markdown.
+- Cite only provided evidence by `fileId`, `hunkId`, and `lineIds`.
+- Do not invent code or symbols. If uncertain, lower `confidence` and add highlight `lowConfidence`.
+- Use `kind` in {"feature","fix","refactor","perf","security","docs","test","build","config","chore"}.
+- Score `importance` and `risk` on 1..5; `confidence` on 0..1.
+- If the hunk is noise (formatting/comments only), return `items: []`.
+
+Output contract:
+```json
+{
+  "items": [
+    {
+      "fileId": "...",
+      "hunkId": "...",
+      "kind": "feature",
+      "headline": "...",
+      "whatChanged": "...",
+      "whyChanged": "...",
+      "operations": [ { "op": "changeSignature", "details": "..." } ],
+      "entities": { "symbols": ["..."], "exports": ["..."] },
+      "highlights": [ { "tag": "publicApi", "note": "..." } ],
+      "importance": 3,
+      "risk": 2,
+      "confidence": 0.8,
+      "evidence": [ { "fileId": "...", "hunkId": "...", "lineIds": ["l1","l2"] } ],
+      "renderHints": { "emphasis": ["apis"], "preferredView": "byKind" }
+    }
+  ],
+  "warnings": []
+}
+```
+
+Input:
+```json
+{
+  "meta": {{ meta_json | safe }},
+  "file": {{ file_json | safe }},
+  "hunk": {{ hunk_json | safe }},
+  "tsEntities": {{ tsEntities_json | safe }},
+  "hints": {{ hints_json | safe }}
+}
+```
+
+Instructions:
+- Prefer small, clear headlines. Keep `whatChanged`/`whyChanged` to 1–2 sentences each.
+- Detect public API surface (exports) and mark `publicApi` highlight when applicable.
+- If security/auth patterns are added/changed, set `kind: "security"` and raise `risk`.
+- If pure refactor (rename/move without logic change), set `kind: "refactor"` and low `risk`.
+- Use provided TypeScript entities to improve precision; do not guess beyond evidence.
+

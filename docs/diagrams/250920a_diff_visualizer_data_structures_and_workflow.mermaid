@@ -1,0 +1,50 @@
+flowchart TB
+
+  %% Subgraph: Data Structures
+  subgraph DS[Data Structures]
+    direction TB
+    BD[📦 BasicDiff<br/>• Deterministic, lossless<br/>• Stable IDs file hunk line<br/>• Meta and totals<br/>• Files → Hunks → Lines<br/>• Attachments blobs and context slices<br/>• Hunk contentHash<br/>• Optional word diff spans]
+    RD[📦 RichDiff<br/>• References BasicDiff by IDs only<br/>• Summary clusters items relations views trace<br/>• Items include evidence refs fileId hunkId lineIds<br/>• No raw patch text<br/>• Optional Mermaid per cluster]
+    BD -->|IDs and evidence refs| RD
+  end
+
+  %% Subgraph: Workflow
+  subgraph WF[Workflow]
+    direction TB
+    P[🚀 Diff Visualizer Pipeline<br/>• Run git diff via CLI
+• Generate basic diff json with diff:json
+• Deterministic enrichment with diff:enrich
+• Heuristic rich diff json with diff:rich
+• Render HTML with diff:html
+• Open rich diff report]
+  end
+
+  G[🗂️ Git repo] -->|git diff| BD
+  P -->|artifacts| OUT[📤 Outputs<br/>• out/basic-diff.json<br/>• out/enrichment.json<br/>• out/rich-diff.json<br/>• out/rich-diff.html]
+
+  CR[Default context radius 20]:::note
+  BD -.-> CR
+
+  %% Styling
+  class BD basic;
+  class RD rich;
+  class P pipeline;
+  class OUT output;
+  class G source;
+
+  classDef basic fill:#e6f2ff,stroke:#2b7bff,stroke-width:1px,color:#0b2a4a;
+  classDef rich fill:#fff4e6,stroke:#ff8c2b,stroke-width:1px,color:#4a2a0b;
+  classDef pipeline fill:#e6ffe6,stroke:#2bff7b,stroke-width:1px,color:#0b4a2a;
+  classDef output fill:#f0f0f0,stroke:#999,stroke-width:1px,color:#333;
+  classDef source fill:#f0e6ff,stroke:#7b2bff,stroke-width:1px,color:#2a0b4a;
+  classDef note fill:#fff,stroke:#bbb,stroke-dasharray: 3 3,color:#444;
+
+%% Notes
+%% Diff Visualizer – Data Structures and Workflow
+%% Sources: docs/reference/DATA_STRUCTURES.md and README.md Quick Start
+%% To regenerate SVG:
+%% npx mmdc -i docs/diagrams/250920a_diff_visualizer_data_structures_and_workflow.mermaid \
+%%   -o docs/diagrams/250920a_diff_visualizer_data_structures_and_workflow.svg \
+%%   -w 1400 -H 1600 -s 2 -b transparent -t default
+
+

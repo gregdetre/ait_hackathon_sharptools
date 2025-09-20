@@ -31,7 +31,8 @@ Build a value-focused diff visualizer that:
 
 ### Stage: Foundations and Schemas
 - [x] Add TypeScript schemas for `BasicDiff` and `RichDiff` in `types/diff-schemas.ts`
-- [x] Decide/default context radius (default: 20; configurable via `--context-radius`)
+ - [x] Decide/default context radius (default: 20; configurable via `--context-radius`)
+ - [x] Add hunk `contentHash` to schema for caching (schema v1.1.0)
 - [ ] Decide file snapshot limits (default off; limit small files)
 
 ### Stage: Basic Diff Generator
@@ -43,6 +44,7 @@ Build a value-focused diff visualizer that:
   - [x] Computes totals and basic stats
   - [x] Attaches blob identities (before/after) when available
   - [x] Fetches and attaches code context slices around hunks (default on; radius configurable)
+  - [x] Computes hunk `contentHash` for caching (normalized header + ops + text)
   - [x] Exposes a function and a CLI wrapper (e.g., `tsx sharptools/diff/basic-diff.ts --output out/basic-diff.json`)
 
 ### Stage: TypeScript Pre-enrichment (Deterministic)
@@ -62,6 +64,12 @@ Build a value-focused diff visualizer that:
   - [x] Consumes `BasicDiff` + enrichment and produces `RichDiff` (heuristic stub; no LLM calls yet)
   - [ ] Caches per-hunk item results by hash
   - [ ] Validates output strictly against schema, annotates low-confidence sections
+
+Notes:
+- Provider: use Anthropic for the first version (JSON-only), aligned with `sharptools/chat-server.ts`.
+- Prompts authored as Nunjucks `.md.njk` templates (Markdown with templating variables).
+- Input caps: default context radius 20; enforce per-hunk token budget and truncate long hunks deterministically.
+- Cache per-hunk by `contentHash` and reuse prior LLM results when unchanged.
 
 ### Stage: HTML Renderer
 - [x] Implement `sharptools/diff/rich-diff-html.ts` that renders a standalone HTML:
@@ -128,5 +136,21 @@ Build a value-focused diff visualizer that:
 - Item extraction prompt: strict JSON output, include `evidence` refs (file/hunk/lineIds), forbid speculative code, include confidence.
 - Clustering prompt: accept list of items, group into clusters with titles, heuristics, and Mermaid summaries; add callouts.
 - Mermaid prompt: produce small, readable diagrams; prefer sequence/class/flow as appropriate; keep within size limits.
+
+## Progress – 2025-09-20
+
+- Added `contentHash` to `Hunk` in `sharptools/claude-conversation-exporter/types/diff-schemas.ts` (schema v1.1.0) to enable per-hunk caching.
+- Authored Nunjucks prompt templates:
+  - `prompts/templates/pass_a_item_extraction.md.njk`
+  - `prompts/templates/pass_b_clustering.md.njk`
+  - `prompts/templates/pass_c_diagram.md.njk`
+- Wrote `docs/reference/PROMPT_TEMPLATES.md` documenting the templating approach and I/O contracts.
+- Updated `docs/reference/DATA_STRUCTURES.md` to mention `contentHash` and clarify hunk attachments.
+
+## Notes
+
+- Provider: use Anthropic for v1 (JSON-only), consistent with `sharptools/chat-server.ts`.
+- Context radius: default 20 lines (configurable); apply deterministic truncation for very large hunks.
+- Caching: reuse per-hunk LLM results keyed by `contentHash` to avoid re-processing unchanged hunks.
 
 

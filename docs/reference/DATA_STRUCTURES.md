@@ -28,6 +28,7 @@ For full, authoritative details see the TypeScript definitions in:
 - Captures meta (tool invocation, args, refs), totals, and a list of file diffs.
 - Each file diff contains status (added/modified/deleted/renamed/copied/etc.), stats, hunks, and optional `rawPatch`.
 - Each hunk records ranges and an array of lines with `op` (context/add/del). Optional word-diff spans.
+- Each hunk includes a `contentHash` used for caching and incremental processing.
 - Attachments (optional):
   - Blob identities for before/after
   - File snapshots (size-capped; off by default)

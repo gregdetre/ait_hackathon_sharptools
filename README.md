@@ -46,6 +46,37 @@ One-liner:
 npm run diff:json && npm run diff:enrich && npm run diff:rich && npm run diff:html && open out/rich-diff.html
 ```
 
+### LLM-enhanced Rich Diff
+
+Prereq (set once):
+```bash
+echo 'ANTHROPIC_API_KEY=your_key_here' > .env.local
+```
+
+Generate rich diff with LLM:
+```bash
+npm run diff:rich:llm
+```
+
+LLM one-liner:
+```bash
+npm run diff:json && npm run diff:enrich && npm run diff:rich:llm && npm run diff:html && open out/rich-diff.html
+```
+
+End-to-end pipeline (timestamped artifacts):
+```bash
+# Open after generation
+npm run diff:pipeline:llm -- --open
+
+# Between refs/commits
+npm run diff:pipeline:llm -- --commits abc123..def456 --open
+
+# Single commit vs parent
+npm run diff:pipeline:llm -- --commits e8f3a986c86fbe7d75faf00c6ad149182f74581c --open
+```
+
+Note: If the API key is missing, the LLM step will gracefully fall back to the heuristic rich diff.
+
 Tips:
 - Pass extra options to the diff step via npm:
   - Only staged changes

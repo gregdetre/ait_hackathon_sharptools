@@ -112,16 +112,12 @@
 <body>
     <header>
         <strong>Sharp Tools — Minimal Chat</strong>
-        <span class="small">POST /chat using OpenAI via TypeScript backend</span>
+        <span class="small">POST /chat using Anthropic via TypeScript backend</span>
     </header>
     <main>
         <div class="row">
             <label for="model">Model:</label>
-            <select id="model">
-                <option value="gpt-4o">gpt-4o</option>
-                <option value="gpt-4o-mini" selected>gpt-4o-mini</option>
-                <option value="o1-mini">o1-mini</option>
-            </select>
+            <select id="model"></select>
         </div>
         <div class="messages" id="messages"></div>
         <form id="form">
@@ -132,14 +128,53 @@
     <script>
         const elHtml = document.documentElement
         fetch('/config').then(r => r.json()).then(cfg => {
-            const mode = (cfg?.themeMode || 'light')
+            const mode = (cfg?.themeMode || 'light');
             if (mode === 'auto') {
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-                elHtml.setAttribute('data-theme', prefersDark ? 'dark' : 'light')
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                elHtml.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
             } else {
-                elHtml.setAttribute('data-theme', mode)
+                elHtml.setAttribute('data-theme', mode);
             }
-        }).catch(() => { elHtml.setAttribute('data-theme', 'light') })
+
+            // Populate models if provided by the server
+            const models = Array.isArray(cfg?.models) ? cfg.models : [];
+            const defaultModelId = cfg?.defaultModelId || (models[0]?.id) || '';
+            if (models.length > 0) {
+                elModel.innerHTML = '';
+                for (const m of models) {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.label;
+                    if (m.id === defaultModelId) opt.selected = true;
+                    elModel.appendChild(opt);
+                }
+            } else {
+                // Fallback options (shouldn't happen if server sends models)
+                elModel.innerHTML = '';
+                const opt = document.createElement('option');
+                opt.value = 'claude-sonnet-4';
+                opt.textContent = 'Claude Sonnet 4';
+                opt.selected = true;
+                elModel.appendChild(opt);
+                const opt2 = document.createElement('option');
+                opt2.value = 'claude-opus-4.1';
+                opt2.textContent = 'Claude Opus 4.1';
+                elModel.appendChild(opt2);
+            }
+        }).catch(() => {
+            elHtml.setAttribute('data-theme', 'light');
+            // Minimal fallback
+            elModel.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = 'claude-sonnet-4';
+            opt.textContent = 'Claude Sonnet 4';
+            opt.selected = true;
+            elModel.appendChild(opt);
+            const opt2 = document.createElement('option');
+            opt2.value = 'claude-opus-4.1';
+            opt2.textContent = 'Claude Opus 4.1';
+            elModel.appendChild(opt2);
+        })
 
         const elMsgs = document.getElementById('messages');
         const elForm = document.getElementById('form');

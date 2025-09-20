@@ -2,7 +2,7 @@ import http from 'http'
 import { promises as fs } from 'fs'
 import path from 'path'
 import url from 'url'
-import { getThemeMode, getPort } from './config'
+import { getThemeMode, getPort, getModel, getAvailableModels, getDefaultModelId } from './config'
 
 // Load env from .env.local if present
 try {
@@ -71,28 +71,37 @@ async function handleChat(req: http.IncomingMessage, res: http.ServerResponse) {
     const raw = Buffer.concat(chunks).toString('utf-8') || '{}'
     const data = JSON.parse(raw)
     const message = String((data?.message ?? '')).trim()
-    const model = String((data?.model ?? 'gpt-4o')).trim()
+    const modelArg = typeof data?.model === 'string' ? data.model : undefined
     if (!message) return sendJson(res, 400, { error: "Missing 'message'" })
 
-    let OpenAI: any
-    try {
-      const m = await import('openai')
-      OpenAI = (m as any).default || m
-    } catch (e: any) {
-      return sendJson(res, 500, { error: `LLM backend not available: ${e?.message || String(e)}` })
+    const model = getModel(modelArg)
+
+    if (model.provider === 'anthropic') {
+      let Anthropic: any
+      try {
+        const m = await import('@anthropic-ai/sdk')
+        Anthropic = (m as any).default || m
+      } catch (e: any) {
+        return sendJson(res, 500, { error: `LLM backend not available: ${e?.message || String(e)}` })
+      }
+
+      const apiKey = process.env.ANTHROPIC_API_KEY
+      if (!apiKey) return sendJson(res, 500, { error: 'LLM backend not configured: Missing ANTHROPIC_API_KEY' })
+
+      const anthropic = new Anthropic({ apiKey })
+      const resp = await anthropic.messages.create({
+        model: model.apiModel,
+        max_tokens: 1024,
+        temperature: 0.2,
+        messages: [{ role: 'user', content: message }],
+      } as any)
+      const reply = Array.isArray((resp as any).content)
+        ? (resp as any).content.find((c: any) => c?.type === 'text')?.text || ''
+        : ((resp as any).content || '')
+      return sendJson(res, 200, { reply, provider: model.provider, model: model.id })
     }
 
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) return sendJson(res, 500, { error: 'LLM backend not configured: Missing OPENAI_API_KEY' })
-
-    const client = new OpenAI({ apiKey })
-    const resp = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: message }],
-      temperature: 0.2
-    })
-    const reply = resp?.choices?.[0]?.message?.content ?? ''
-    return sendJson(res, 200, { reply })
+    return sendJson(res, 500, { error: 'Unsupported model provider' })
   } catch (e: any) {
     return sendJson(res, 500, { error: e?.message || String(e) })
   }
@@ -133,7 +142,12 @@ const server = http.createServer(async (req, res) => {
   log(`${method} ${pathname}`)
 
   if (method === 'GET' && pathname === '/config') {
-    return void sendJson(res, 200, { themeMode: getThemeMode(), port: PORT })
+    return void sendJson(res, 200, {
+      themeMode: getThemeMode(),
+      port: PORT,
+      models: getAvailableModels(),
+      defaultModelId: getDefaultModelId(),
+    })
   }
 
   if (method === 'POST' && pathname === '/chat') return void (await handleChat(req, res))

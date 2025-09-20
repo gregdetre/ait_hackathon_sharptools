@@ -1,26 +1,42 @@
 {
-  "name": "claude-conversation-exporter",
-  "version": "1.0.0",
-  "description": "Export Claude Code conversations to JSON using Clipanion CLI",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node sharptools/claude-conversation-exporter/index.ts",
-    "export": "npm run build && npm start"
-  },
-  "keywords": ["claude", "cli", "export", "conversation", "json"],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "clipanion": "^4.0.0-rc.4"
-  },
-  "devDependencies": {
-    "@types/node": "^20.11.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+    "name": "claude-conversation-exporter",
+    "version": "1.0.0",
+    "description": "Export Claude Code conversations to JSON using Clipanion CLI",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "dev": "tsx sharptools/claude-conversation-exporter/index.ts",
+        "export": "npm run build && npm start",
+        "prechat": "sh -c 'PORT=${PORT:-8787}; PIDS=$(lsof -ti tcp:$PORT); if [ -n \"$PIDS\" ]; then echo \"Killing process(es) on port $PORT: $PIDS\"; kill $PIDS || true; sleep 0.5; PIDS=$(lsof -ti tcp:$PORT); if [ -n \"$PIDS\" ]; then echo \"Force killing: $PIDS\"; kill -9 $PIDS || true; fi; fi'",
+        "chat": "sh -c 'PORT=${PORT:-8787}; HOST=${HOST:-127.0.0.1}; tsx sharptools/chat-server.ts --host=$HOST --port=$PORT --dir=./sharptools/chat'",
+        "git:diff": "tsx sharptools/git-diff.ts",
+        "markdown:html": "tsx sharptools/markdown-to-html.ts",
+        "generate:mermaid": "tsx sharptools/generate-mermaid-diagram.ts"
+    },
+    "keywords": [
+        "claude",
+        "cli",
+        "export",
+        "conversation",
+        "json"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "clipanion": "^4.0.0-rc.4",
+        "@anthropic-ai/sdk": "^0.21.0",
+        "dotenv": "^16.4.5",
+        "highlight.js": "^11.9.0",
+        "markdown-it": "^14.1.0",
+        "openai": "^4.68.4"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.0",
+        "tsx": "^4.0.0",
+        "typescript": "^5.3.3"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
 }

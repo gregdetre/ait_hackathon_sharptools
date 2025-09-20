@@ -304,6 +304,13 @@ export interface RichDiff {
     model: { provider: 'openai' | 'anthropic' | 'local'; name: string };
     promptVersion: string;
     basicDiffRef: { hash: string }; // content-hash of the BasicDiff input
+    /** Optional git context carried from BasicDiff.meta.git for display */
+    git?: {
+      baseRef?: string;
+      headRef?: string;
+      rangeArg?: string;
+      staged?: boolean;
+    };
     goalRef?: { planningDocPath?: string; goalSummary?: string };
   };
   summary: {

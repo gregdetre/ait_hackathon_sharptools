@@ -18,7 +18,7 @@ interface EvidenceRef { fileId: string; hunkId?: string; lineIds?: string[] }
 interface Operation { op: string; details?: string }
 interface Entities { symbols?: string[]; exports?: string[]; routes?: Array<{ method: string; path: string }>; tables?: string[]; filesTouched?: string[]; configKeys?: string[] }
 interface Highlight { tag: string; note?: string }
-interface RichDiffMeta { createdAtIso: string; model?: { provider: string; name: string } }
+interface RichDiffMeta { createdAtIso: string; model?: { provider: string; name: string }; git?: { baseRef?: string; headRef?: string; rangeArg?: string; staged?: boolean } }
 interface RichItem {
   id: string;
   fileId: string;
@@ -162,6 +162,16 @@ class RichDiffHtmlCommand extends Command {
       details.cluster > summary::-webkit-details-marker { display: none; }
     `;
 
+    function renderGitContext(meta: RichDiffMeta | undefined): string {
+      if (!meta || !meta.git) return '';
+      const g = meta.git;
+      const parts: string[] = [];
+      if (g.rangeArg) parts.push(escapeHtml(g.rangeArg));
+      else if (g.baseRef || g.headRef) parts.push(`${escapeHtml(g.baseRef || '?')}..${escapeHtml(g.headRef || '?')}`);
+      if (g.staged) parts.push('(staged)');
+      return parts.length ? `<p class="muted">Commit range: ${parts.join(' ')}</p>` : '';
+    }
+
     return `<!doctype html>
 <html lang="en">
   <head>
@@ -176,6 +186,7 @@ class RichDiffHtmlCommand extends Command {
         <h1>${escapeHtml(doc.summary.headline || 'Rich Diff')}</h1>
         <p class="muted">Total files changed: ${doc.summary.totals.filesChanged}, +${doc.summary.totals.additions}/-${doc.summary.totals.deletions}${typeof doc.summary.totals.clusters === 'number' ? `, clusters: ${doc.summary.totals.clusters}` : ''}</p>
         ${doc.meta && doc.meta.model ? `<p class="muted">Model: ${escapeHtml(doc.meta.model.provider)} · ${escapeHtml(doc.meta.model.name)}</p>` : ''}
+        ${renderGitContext(doc.meta)}
         <div class="toolbar">
           <span class="spacer"></span>
           <span id="items-count" class="muted"></span>

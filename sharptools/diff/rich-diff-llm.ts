@@ -364,6 +364,12 @@ class RichDiffLlmCommand extends Command {
           model: { provider: providerForMeta as any, name: modelNameForMeta },
           promptVersion: this.promptVersion,
           basicDiffRef: { hash: 'not-computed' },
+          git: {
+            baseRef: basic.meta?.git?.baseRef,
+            headRef: basic.meta?.git?.headRef,
+            rangeArg: basic.meta?.git?.rangeArg,
+            staged: basic.meta?.git?.staged,
+          },
           goalRef: { planningDocPath: 'planning/250920a_diff_visualizer_planning.md', goalSummary: 'Diff Visualizer MVP' },
         },
         summary: summary!,

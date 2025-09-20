@@ -39,6 +39,12 @@ interface Cluster { id: string; title: string; kind: string; description: string
 interface Callout { id: string; title: string; whyItMatters: string; importance: number; risk: number; confidence: number; references: EvidenceRef[] }
 interface RichDiffDoc { meta: RichDiffMeta; summary: { headline: string; narrative: string; keyCallouts?: Callout[]; totals: { filesChanged: number; additions: number; deletions: number; clusters: number } }; clusters?: Cluster[]; items: RichItem[] }
 
+// Minimal BasicDiff shapes for optional evidence rendering
+interface BasicHunkContext { radius: number; before?: string[]; after?: string[] }
+interface BasicHunk { id: string; attachments?: { context?: BasicHunkContext } }
+interface BasicFile { id: string; pathOld?: string; pathNew?: string; rawPatch?: string; hunks: BasicHunk[] }
+interface BasicDiffDoc { files: BasicFile[]; meta?: { git?: { baseRef?: string; headRef?: string; rangeArg?: string; staged?: boolean } } }
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, '&amp;')
@@ -59,11 +65,13 @@ class RichDiffHtmlCommand extends Command {
   inputFile = Option.String('--input,-i', { required: true, description: 'Path to RichDiff JSON' });
   outputFile = Option.String('--output,-o', { required: true, description: 'Path to output HTML file' });
   quiet = Option.Boolean('--quiet,-q', false, { description: 'Suppress non-essential errors' });
+  basicFile = Option.String('--basic,-b', { required: false, description: 'Optional path to BasicDiff JSON to render evidence snippets' });
 
   async execute(): Promise<number> {
     try {
       const doc: RichDiffDoc = JSON.parse(await readFile(resolve(this.inputFile), 'utf8'));
-      const html = this.render(doc);
+      const basic: BasicDiffDoc | undefined = this.basicFile ? JSON.parse(await readFile(resolve(this.basicFile), 'utf8')) : undefined;
+      const html = this.render(doc, basic);
       await writeFile(resolve(this.outputFile), html, 'utf8');
       return 0;
     } catch (err: any) {
@@ -75,9 +83,56 @@ class RichDiffHtmlCommand extends Command {
     }
   }
 
-  private render(doc: RichDiffDoc): string {
+  private render(doc: RichDiffDoc, basic?: BasicDiffDoc): string {
     const itemsById: Record<string, RichItem> = Object.fromEntries((doc.items || []).map(i => [i.id, i]));
     const kinds = Array.from(new Set((doc.items || []).map(i => i.kind))).sort((a, b) => a.localeCompare(b));
+    const basicFilesById: Record<string, BasicFile> = {};
+    if (basic && Array.isArray(basic.files)) {
+      for (const f of basic.files) basicFilesById[f.id] = f;
+    }
+
+    function resolveFilePath(f?: BasicFile): string | undefined {
+      if (!f) return undefined;
+      // Prefer new path if available; strip common a/ b/ prefixes for readability
+      const candidate = f.pathNew || f.pathOld || '';
+      return candidate.replace(/^a\//, '').replace(/^b\//, '') || undefined;
+    }
+
+    function renderEvidenceSnippets(item: RichItem): string {
+      if (!basic || !Array.isArray(item.evidence) || !item.evidence.length) return '';
+      const blocks: string[] = [];
+      for (const ev of item.evidence) {
+        const file = basicFilesById[ev.fileId];
+        if (!file) continue;
+        const filePath = resolveFilePath(file) || ev.fileId;
+        if (!ev.hunkId) {
+          // No hunk reference – fall back to rawPatch excerpt if present
+          if (file.rawPatch) {
+            const lines = file.rawPatch.split('\n').slice(0, 40).join('\n');
+            blocks.push(`<div class="snippet"><div class="muted">${escapeHtml(filePath)} (patch excerpt)</div><pre><code>${escapeHtml(lines)}</code></pre></div>`);
+          }
+          continue;
+        }
+        const h = (file.hunks || []).find(hh => hh.id === ev.hunkId);
+        const ctx = h && h.attachments && h.attachments.context;
+        if (ctx && (ctx.after?.length || ctx.before?.length)) {
+          const after = (ctx.after && ctx.after.length) ? ctx.after.join('\n') : undefined;
+          const before = (ctx.before && ctx.before.length) ? ctx.before.join('\n') : undefined;
+          const which = after ? 'after' : 'before';
+          const content = after || before || '';
+          blocks.push(
+            `<div class="snippet">
+               <div class="muted">${escapeHtml(filePath)} · hunk ${escapeHtml(ev.hunkId)} · ${which} (±${String(ctx.radius)} lines)</div>
+               <pre><code>${escapeHtml(content)}</code></pre>
+             </div>`
+          );
+        } else if (file.rawPatch) {
+          const lines = file.rawPatch.split('\n').filter(l => l.startsWith('@@') || l.startsWith('+') || l.startsWith('-')).slice(0, 40).join('\n');
+          if (lines) blocks.push(`<div class="snippet"><div class="muted">${escapeHtml(filePath)} · hunk ${escapeHtml(ev.hunkId)} (raw patch)</div><pre><code>${escapeHtml(lines)}</code></pre></div>`);
+        }
+      }
+      return blocks.length ? `<details class="evidence"><summary>View evidence snippet${item.evidence!.length > 1 ? 's' : ''}</summary>${blocks.join('')}</details>` : '';
+    }
     const rows = (doc.items || []).map(item => {
       const ops = Array.isArray(item.operations) && item.operations.length
         ? `<div><strong>Operations</strong><ul>${item.operations.map(op => `<li><code>${escapeHtml(op.op)}</code>${op.details ? ` – ${escapeHtml(op.details)}` : ''}</li>`).join('')}</ul></div>`
@@ -95,19 +150,22 @@ class RichDiffHtmlCommand extends Command {
       const evidence = Array.isArray(item.evidence) && item.evidence.length
         ? `<div class="muted">Evidence: ${item.evidence.map(e => `${escapeHtml(e.fileId)}${e.hunkId ? `#${escapeHtml(e.hunkId)}` : ''}${e.lineIds && e.lineIds.length ? ` [${e.lineIds.length} lines]` : ''}`).join('; ')}</div>`
         : '';
-      const details = [item.whyChanged ? `<div><strong>Why</strong>: ${escapeHtml(item.whyChanged)}</div>` : '', ops, ents, highlights, evidence]
+      const snippets = renderEvidenceSnippets(item);
+      const anchorBtn = `<button class="btn btn-sm copy-link" type="button" data-target="#item-${escapeHtml(item.id)}">Copy link</button>`;
+      const details = [item.whyChanged ? `<div><strong>Why</strong>: ${escapeHtml(item.whyChanged)}</div>` : '', ops, ents, highlights, evidence, snippets, anchorBtn]
         .filter(Boolean)
         .join('');
       const detailsCell = details
         ? `<details><summary>View</summary>${details}</details>`
         : '';
+      const confBucket = item.confidence >= 0.9 ? 'conf-5' : item.confidence >= 0.75 ? 'conf-4' : item.confidence >= 0.5 ? 'conf-3' : item.confidence >= 0.25 ? 'conf-2' : 'conf-1';
       return `<tr id="item-${escapeHtml(item.id)}" data-item-id="${escapeHtml(item.id)}" data-kind="${escapeHtml(item.kind)}" data-importance="${String(item.importance)}" data-risk="${String(item.risk)}" data-confidence="${String(item.confidence)}" data-headline="${escapeHtml(item.headline)}" data-what="${escapeHtml(item.whatChanged)}">
         <td><span class="tag">${escapeHtml(item.kind)}</span></td>
         <td>${escapeHtml(item.headline)}</td>
         <td>${escapeHtml(item.whatChanged)}</td>
-        <td><span class="chip chip-imp">${item.importance}</span></td>
-        <td><span class="chip chip-risk">${item.risk}</span></td>
-        <td><span class="chip">${Math.round(item.confidence * 100)}%</span></td>
+        <td><span class="chip chip-imp imp-${item.importance}">${item.importance}</span></td>
+        <td><span class="chip chip-risk risk-${item.risk}">${item.risk}</span></td>
+        <td><span class="chip chip-conf ${confBucket}">${Math.round(item.confidence * 100)}%</span></td>
         <td>${detailsCell}</td>
       </tr>`;
     }).join('\n');
@@ -122,6 +180,10 @@ class RichDiffHtmlCommand extends Command {
         --accent: #3730a3;
         --chip-bg: #eef2ff;
         --tag-bg: #f1f5f9;
+        --danger: #ef4444;
+        --warn: #f59e0b;
+        --ok: #10b981;
+        --info: #3b82f6;
       }
       .dark {
         --bg: #0b1020;
@@ -132,10 +194,20 @@ class RichDiffHtmlCommand extends Command {
         --accent: #a5b4fc;
         --chip-bg: #1f2a44;
         --tag-bg: #0f172a;
+        --danger: #f87171;
+        --warn: #fbbf24;
+        --ok: #34d399;
+        --info: #60a5fa;
       }
       html, body { background: var(--bg); color: var(--text); }
       body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; line-height: 1.6; margin: 0; }
       main { max-width: 1160px; margin: 2rem auto; padding: 0 1rem; }
+      .layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; }
+      .sidebar { position: sticky; top: 10px; align-self: start; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: transparent; }
+      .sidebar h3 { margin: 0 0 8px; font-size: 0.95rem; }
+      .sidebar a { display: block; color: var(--text); text-decoration: none; padding: 4px 6px; border-radius: 6px; }
+      .sidebar a:hover { background: var(--card); }
+      .sidebar .count { color: var(--muted); }
       table { width: 100%; border-collapse: collapse; }
       th, td { border-bottom: 1px solid var(--border); padding: 8px 6px; text-align: left; vertical-align: top; }
       th { background: var(--card); position: sticky; top: 0; }
@@ -147,17 +219,29 @@ class RichDiffHtmlCommand extends Command {
       .controls label { font-size: 12px; color: var(--muted); display: block; }
       .controls input, .controls select { width: 100%; box-sizing: border-box; padding: 6px 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; }
       .btn { padding: 6px 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 6px; cursor: pointer; }
+      .btn-sm { padding: 2px 8px; font-size: 12px; }
       .btn:hover { background: var(--card); }
       .cluster { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin: 10px 0; background: transparent; }
       .cluster .chips { margin: 6px 0; }
-      .chip { display: inline-block; background: var(--chip-bg); color: var(--accent); padding: 2px 8px; border-radius: 9999px; font-size: 12px; margin-right: 6px; }
-      .chip-imp { }
-      .chip-risk { }
+      .chip { display: inline-block; background: var(--chip-bg); color: var(--accent); padding: 2px 8px; border-radius: 9999px; font-size: 12px; margin-right: 6px; border: 1px solid var(--border); }
+      .chip-imp.imp-1, .chip-imp.imp-2 { color: var(--info); }
+      .chip-imp.imp-3 { color: #6366f1; }
+      .chip-imp.imp-4, .chip-imp.imp-5 { color: #4f46e5; }
+      .chip-risk.risk-1, .chip-risk.risk-2 { color: var(--ok); }
+      .chip-risk.risk-3 { color: var(--warn); }
+      .chip-risk.risk-4, .chip-risk.risk-5 { color: var(--danger); }
+      .chip-conf.conf-1 { color: #94a3b8; }
+      .chip-conf.conf-2 { color: #60a5fa; }
+      .chip-conf.conf-3 { color: #3b82f6; }
+      .chip-conf.conf-4 { color: #2563eb; }
+      .chip-conf.conf-5 { color: #1d4ed8; }
       .tag { display: inline-block; background: var(--tag-bg); color: var(--text); padding: 1px 6px; border-radius: 6px; font-size: 12px; margin-right: 4px; border: 1px solid var(--border); }
       .callouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin: 10px 0; }
       .callout { border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: transparent; }
       .callout .title { font-weight: 600; }
       .mermaid { background: var(--card); border-radius: 6px; padding: 8px; white-space: pre; overflow-x: auto; }
+      .legend { display: flex; gap: 10px; align-items: center; font-size: 12px; color: var(--muted); }
+      .snippet pre { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 8px; overflow: auto; }
       details.cluster > summary { cursor: pointer; list-style: none; }
       details.cluster > summary::-webkit-details-marker { display: none; }
     `;
@@ -172,6 +256,10 @@ class RichDiffHtmlCommand extends Command {
       return parts.length ? `<p class="muted">Commit range: ${parts.join(' ')}</p>` : '';
     }
 
+    const itemsCount = (doc.items || []).length;
+    const clustersCount = Array.isArray(doc.clusters) ? doc.clusters.length : 0;
+    const calloutsCount = Array.isArray(doc.summary?.keyCallouts) ? doc.summary.keyCallouts.length : 0;
+
     return `<!doctype html>
 <html lang="en">
   <head>
@@ -182,7 +270,16 @@ class RichDiffHtmlCommand extends Command {
   </head>
   <body>
     <main>
-      <header>
+      <div class="layout">
+        <aside class="sidebar">
+          <h3>Overview</h3>
+          <a href="#summary">Summary</a>
+          <a href="#key-callouts">Key callouts <span class="count">(${calloutsCount})</span></a>
+          <a href="#items">Items <span class="count">(${itemsCount})</span></a>
+          <a href="#clusters">Clusters <span class="count">(${clustersCount})</span></a>
+        </aside>
+        <div class="content">
+      <header id="summary">
         <h1>${escapeHtml(doc.summary.headline || 'Rich Diff')}</h1>
         <p class="muted">Total files changed: ${doc.summary.totals.filesChanged}, +${doc.summary.totals.additions}/-${doc.summary.totals.deletions}${typeof doc.summary.totals.clusters === 'number' ? `, clusters: ${doc.summary.totals.clusters}` : ''}</p>
         ${doc.meta && doc.meta.model ? `<p class="muted">Model: ${escapeHtml(doc.meta.model.provider)} · ${escapeHtml(doc.meta.model.name)}</p>` : ''}
@@ -190,11 +287,13 @@ class RichDiffHtmlCommand extends Command {
         <div class="toolbar">
           <span class="spacer"></span>
           <span id="items-count" class="muted"></span>
+          <button id="theme-toggle" class="btn" type="button">Toggle theme</button>
         </div>
+        ${doc.meta && (doc.meta as any).goalRef ? `<p class="muted">Goal: ${escapeHtml((doc.meta as any).goalRef.goalSummary || '')}${(doc.meta as any).goalRef.planningDocPath ? ` — <a href="${escapeHtml((doc.meta as any).goalRef.planningDocPath)}">planning doc</a>` : ''}</p>` : ''}
         <p>${escapeHtml(doc.summary.narrative || '')}</p>
       </header>
       ${Array.isArray(doc.summary.keyCallouts) && doc.summary.keyCallouts.length ? `
-      <section>
+      <section id="key-callouts">
         <h2>Key callouts</h2>
         <div class="callouts">
           ${doc.summary.keyCallouts.map(k => `
@@ -211,7 +310,7 @@ class RichDiffHtmlCommand extends Command {
         </div>
       </section>
       ` : ''}
-      <section>
+      <section id="items">
         <h2>Items</h2>
         <div class="controls">
           <div>
@@ -279,6 +378,11 @@ class RichDiffHtmlCommand extends Command {
             <button id="filters-reset" class="btn" type="button">Reset</button>
           </div>
         </div>
+        <div class="legend">Legend:
+          <span class="chip chip-imp imp-5">Importance</span>
+          <span class="chip chip-risk risk-5">Risk</span>
+          <span class="chip chip-conf conf-5">Confidence</span>
+        </div>
         <table>
           <thead>
             <tr>
@@ -297,7 +401,7 @@ ${rows}
         </table>
       </section>
       ${Array.isArray(doc.clusters) && doc.clusters.length ? `
-      <section>
+      <section id="clusters">
         <h2>Clusters</h2>
         ${doc.clusters.map(c => `
           <details class="cluster" id="cluster-${escapeHtml(c.id)}">
@@ -320,6 +424,8 @@ ${rows}
         `).join('\n')}
       </section>
       ` : ''}
+      </div>
+      </div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script>
@@ -409,6 +515,24 @@ ${rows}
           if (dirSel) dirSel['value'] = 'desc';
           sort();
           update();
+        });
+        // Theme toggle
+        const themeBtn = d.getElementById('theme-toggle');
+        if (themeBtn) themeBtn.addEventListener('click', () => {
+          const dark = document.body.classList.toggle('dark');
+          try { localStorage.setItem('richdiff-theme', dark ? 'dark' : 'light'); } catch {}
+        });
+        // Copy link buttons
+        d.addEventListener('click', (ev) => {
+          const t = ev.target as HTMLElement;
+          if (t && t.classList && t.classList.contains('copy-link')) {
+            const target = t.getAttribute('data-target') || '';
+            if (target) {
+              const url = new URL(window.location.href);
+              url.hash = target;
+              navigator.clipboard && navigator.clipboard.writeText(url.toString()).catch(() => {});
+            }
+          }
         });
         sort();
         update();

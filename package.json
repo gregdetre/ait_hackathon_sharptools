@@ -11,6 +11,7 @@
         "prechat": "sh -c 'PORT=${PORT:-8787}; PIDS=$(lsof -ti tcp:$PORT); if [ -n \"$PIDS\" ]; then echo \"Killing process(es) on port $PORT: $PIDS\"; kill $PIDS || true; sleep 0.5; PIDS=$(lsof -ti tcp:$PORT); if [ -n \"$PIDS\" ]; then echo \"Force killing: $PIDS\"; kill -9 $PIDS || true; fi; fi'",
         "chat": "sh -c 'PORT=${PORT:-8787}; HOST=${HOST:-127.0.0.1}; tsx sharptools/chat-server.ts --host=$HOST --port=$PORT --dir=./sharptools/chat'",
         "git:diff": "tsx sharptools/git-diff.ts",
+        "git:diff:html": "tsx sharptools/git-diff-html.ts",
         "markdown:html": "tsx sharptools/markdown-to-html.ts",
         "generate:mermaid": "tsx sharptools/generate-mermaid-diagram.ts"
     },
@@ -24,7 +25,7 @@
     "author": "",
     "license": "MIT",
     "dependencies": {
-        "clipanion": "^4.0.0-rc.4",
+        "clipanion": "^3.2.1",
         "@anthropic-ai/sdk": "^0.21.0",
         "dotenv": "^16.4.5",
         "highlight.js": "^11.9.0",

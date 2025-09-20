@@ -69,3 +69,6 @@ Thumbs.db
 # Project
 claude-exports
 gjdutils/
+
+.claude/settings.local.json
+

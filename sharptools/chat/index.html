@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="utf-8" />
@@ -8,6 +8,16 @@
     <style>
         :root {
             color-scheme: light dark;
+        }
+
+        html[data-theme="light"] body {
+            background: #fff;
+            color: #111;
+        }
+
+        html[data-theme="dark"] body {
+            background: #0b0b0b;
+            color: #e5e7eb;
         }
 
         body {
@@ -102,7 +112,7 @@
 <body>
     <header>
         <strong>Sharp Tools — Minimal Chat</strong>
-        <span class="small">POST /chat using OpenAI via Python backend</span>
+        <span class="small">POST /chat using OpenAI via TypeScript backend</span>
     </header>
     <main>
         <div class="row">
@@ -120,6 +130,17 @@
         </form>
     </main>
     <script>
+        const elHtml = document.documentElement
+        fetch('/config').then(r => r.json()).then(cfg => {
+            const mode = (cfg?.themeMode || 'light')
+            if (mode === 'auto') {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+                elHtml.setAttribute('data-theme', prefersDark ? 'dark' : 'light')
+            } else {
+                elHtml.setAttribute('data-theme', mode)
+            }
+        }).catch(() => { elHtml.setAttribute('data-theme', 'light') })
+
         const elMsgs = document.getElementById('messages');
         const elForm = document.getElementById('form');
         const elInput = document.getElementById('input');

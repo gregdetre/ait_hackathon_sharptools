@@ -22,6 +22,9 @@ npx tsx sharptools/chat-server.ts --host=127.0.0.1 --port=8787 --dir=./sharptool
 # Git diff helper (Clipanion CLI)
 npm run git:diff -- --name-only
 
+# Git diff → HTML
+npm run git:diff:html -- --output out/diff.html --title "Working Tree Diff"
+
 # Markdown → HTML renderer
 npm run markdown:html -- --input README.md --output README.html
 
@@ -57,6 +60,10 @@ npx tsx sharptools/git-diff.ts abc123 def456
 
 # Names only with forced color
 npx tsx sharptools/git-diff.ts --name-only --color=always
+
+# Render HTML from diff
+npx tsx sharptools/git-diff.ts --color=never \
+| npx tsx sharptools/git-diff-html.ts -o out/piped.html --title "Piped Git Diff"
 ```
 
 See `docs/reference/GIT_DIFF_CLI_REFERENCE.md` for full reference.

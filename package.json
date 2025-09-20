@@ -12,6 +12,10 @@
         "chat": "sh -c 'PORT=${PORT:-8787}; HOST=${HOST:-127.0.0.1}; tsx sharptools/chat-server.ts --host=$HOST --port=$PORT --dir=./sharptools/chat'",
         "git:diff": "tsx sharptools/git-diff.ts",
         "git:diff:html": "tsx sharptools/git-diff-html.ts",
+        "diff:json": "tsx sharptools/diff/basic-diff.ts --output out/basic-diff.json",
+        "diff:enrich": "tsx sharptools/diff/ts-preenrich.ts -i out/basic-diff.json -o out/enrichment.json",
+        "diff:rich": "tsx sharptools/diff/rich-diff.ts -i out/basic-diff.json -e out/enrichment.json -o out/rich-diff.json",
+        "diff:html": "tsx sharptools/diff/rich-diff-html.ts -i out/rich-diff.json -o out/rich-diff.html",
         "markdown:html": "tsx sharptools/markdown-to-html.ts",
         "generate:mermaid": "tsx sharptools/generate-mermaid-diagram.ts"
     },

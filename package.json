@@ -16,6 +16,7 @@
         "diff:enrich": "tsx sharptools/diff/ts-preenrich.ts -i out/basic-diff.json -o out/enrichment.json",
         "diff:rich": "tsx sharptools/diff/rich-diff.ts -i out/basic-diff.json -e out/enrichment.json -o out/rich-diff.json",
         "diff:html": "tsx sharptools/diff/rich-diff-html.ts -i out/rich-diff.json -o out/rich-diff.html",
+        "diff:pipeline": "tsx sharptools/diff/pipeline.ts --open",
         "markdown:html": "tsx sharptools/markdown-to-html.ts",
         "generate:mermaid": "tsx sharptools/generate-mermaid-diagram.ts"
     },

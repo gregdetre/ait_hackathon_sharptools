@@ -1,17 +1,21 @@
 #!/bin/bash
 
-# Enhanced monitor script that uses Claude Code CLI to update visualization
+# Enhanced monitor script that uses Claude Code CLI or OpenCode to update visualization
 # Usage: ./monitor.sh [options] [refresh_seconds]
 # Options:
-#   -d, --debug       Enable debug mode with verbose output
-#   --dry-run         Show what would be sent to Claude without executing
-#   --log-file FILE   Save all output to a log file
+#   -d, --debug           Enable debug mode with verbose output
+#   --dry-run             Show what would be sent to AI without executing
+#   --log-file FILE       Save all output to a log file
+#   --use-opencode        Use OpenCode instead of Claude
+#   --model MODEL         Specify AI model (e.g., opencode/grok-code)
 
 # Parse arguments
 DEBUG=false
 DRY_RUN=false
 LOG_FILE=""
 REFRESH_INTERVAL=3
+USE_OPENCODE=false
+AI_MODEL=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -25,6 +29,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --log-file)
             LOG_FILE="$2"
+            shift 2
+            ;;
+        --use-opencode)
+            USE_OPENCODE=true
+            shift
+            ;;
+        --model)
+            AI_MODEL="$2"
             shift 2
             ;;
         *)
@@ -75,6 +87,12 @@ log() {
 
 # Start message
 log INFO "🚀 Starting git diff monitor..."
+if [ "$USE_OPENCODE" = true ]; then
+    log INFO "🤖 AI Provider: OpenCode"
+    [ ! -z "$AI_MODEL" ] && log INFO "🧠 Model: $AI_MODEL"
+else
+    log INFO "🤖 AI Provider: Claude"
+fi
 log INFO "📊 Visualization file: $VISUALIZATION_FILE"
 log INFO "⏱️  Refresh interval: ${REFRESH_INTERVAL}s"
 [ "$DEBUG" = true ] && log INFO "🐛 Debug mode enabled"
@@ -218,46 +236,69 @@ Keep the existing HTML structure and JavaScript intact. Only update the placehol
         fi
 
         if [ "$DRY_RUN" = true ]; then
-            log INFO "🏃 Dry-run mode - would send the following prompt to Claude:"
+            AI_NAME=$([ "$USE_OPENCODE" = true ] && echo "OpenCode" || echo "Claude")
+            log INFO "🏃 Dry-run mode - would send the following prompt to $AI_NAME:"
             echo "----------------------------------------"
             echo "$PROMPT" | head -20
             echo "... (truncated for display)"
             echo "----------------------------------------"
         else
-            # Call Claude and capture output
-            log INFO "🤖 Calling Claude to update visualization..."
+            # Call AI provider and capture output
+            if [ "$USE_OPENCODE" = true ]; then
+                log INFO "🤖 Calling OpenCode to update visualization..."
 
-            # Create temp files for stdout and stderr
-            CLAUDE_STDOUT=$(mktemp)
-            CLAUDE_STDERR=$(mktemp)
+                # Create temp files for stdout and stderr
+                AI_STDOUT=$(mktemp)
+                AI_STDERR=$(mktemp)
 
-            # Run Claude command
-            claude --dangerously-skip-permissions -p "$PROMPT" > "$CLAUDE_STDOUT" 2> "$CLAUDE_STDERR"
-            CLAUDE_EXIT=$?
+                # Build OpenCode command
+                OPENCODE_CMD="opencode run"
+                if [ ! -z "$AI_MODEL" ]; then
+                    OPENCODE_CMD="$OPENCODE_CMD --model $AI_MODEL"
+                fi
+
+                # Run OpenCode command
+                $OPENCODE_CMD "$PROMPT" > "$AI_STDOUT" 2> "$AI_STDERR"
+                AI_EXIT=$?
+
+                AI_NAME="OpenCode"
+            else
+                log INFO "🤖 Calling Claude to update visualization..."
+
+                # Create temp files for stdout and stderr
+                AI_STDOUT=$(mktemp)
+                AI_STDERR=$(mktemp)
+
+                # Run Claude command
+                claude --dangerously-skip-permissions -p "$PROMPT" > "$AI_STDOUT" 2> "$AI_STDERR"
+                AI_EXIT=$?
+
+                AI_NAME="Claude"
+            fi
 
             # Read the outputs
-            STDOUT_CONTENT=$(cat "$CLAUDE_STDOUT")
-            STDERR_CONTENT=$(cat "$CLAUDE_STDERR")
+            STDOUT_CONTENT=$(cat "$AI_STDOUT")
+            STDERR_CONTENT=$(cat "$AI_STDERR")
 
             # Log results
-            if [ $CLAUDE_EXIT -eq 0 ]; then
-                log SUCCESS "Claude execution completed successfully!"
+            if [ $AI_EXIT -eq 0 ]; then
+                log SUCCESS "$AI_NAME execution completed successfully!"
                 if [ "$DEBUG" = true ] && [ ! -z "$STDOUT_CONTENT" ]; then
-                    log DEBUG "Claude output:"
+                    log DEBUG "$AI_NAME output:"
                     echo "$STDOUT_CONTENT" | head -20
                     if [ $(echo "$STDOUT_CONTENT" | wc -l) -gt 20 ]; then
                         echo "... (output truncated)"
                     fi
                 fi
             else
-                log ERROR "Claude command failed with exit code $CLAUDE_EXIT"
+                log ERROR "$AI_NAME command failed with exit code $AI_EXIT"
                 if [ ! -z "$STDERR_CONTENT" ]; then
                     log ERROR "Error output: $STDERR_CONTENT"
                 fi
             fi
 
             # Clean up temp files
-            rm -f "$CLAUDE_STDOUT" "$CLAUDE_STDERR"
+            rm -f "$AI_STDOUT" "$AI_STDERR"
         fi
     else
         log INFO "⏳ No changes detected (tracked or untracked)"

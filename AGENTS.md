@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Sharp Tools helps programmers use AI-assisted tools (like Claude Code and Cursor) more effectively by providing real-time, digestible readouts of changes being made by AI. The project aims to reduce cognitive load through visual summaries, diagrams, and interactive displays of code changes.
 
+## Coding principles
+
+- Prioritise code that's simple, easy-to-understand, debuggable, and readable.
+- Fix the root cause rather than putting on a band-aid
+- Avoid fallbacks & defaults - better to fail if input assumptions aren't being met. Raise errors early, clearly & fatally.
+
+
 ## Development Commands
 
 ### Development Commands (project root)

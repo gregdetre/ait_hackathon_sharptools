@@ -77,6 +77,7 @@ class DiffPipelineCommand extends Command {
   emitHtml = Option.Boolean('--emit-html', true);
   openFile = Option.Boolean('--open', false);
   quiet = Option.Boolean('--quiet,-q', false);
+  useLlm = Option.Boolean('--use-llm', false);
 
   async execute(): Promise<number> {
     const prefix = dtStamp();
@@ -115,13 +116,20 @@ class DiffPipelineCommand extends Command {
       const enrRes = await runCapture('tsx', enrichArgs);
       if (enrRes.code !== 0) throw new Error(enrRes.stderr || 'ts-preenrich failed');
 
-      // 3) Rich diff
-      const richArgs: string[] = [
-        'sharptools/diff/rich-diff.ts',
-        '-i', basicPath,
-        '-e', enrichPath,
-        '-o', richPath,
-      ];
+      // 3) Rich diff (LLM or heuristic)
+      const richArgs: string[] = this.useLlm
+        ? [
+            'sharptools/diff/rich-diff-llm.ts',
+            '-i', basicPath,
+            '-e', enrichPath,
+            '-o', richPath,
+          ]
+        : [
+            'sharptools/diff/rich-diff.ts',
+            '-i', basicPath,
+            '-e', enrichPath,
+            '-o', richPath,
+          ];
       const richRes = await runCapture('tsx', richArgs);
       if (richRes.code !== 0) throw new Error(richRes.stderr || 'rich-diff failed');
 

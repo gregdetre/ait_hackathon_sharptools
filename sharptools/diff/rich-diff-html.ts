@@ -13,7 +13,8 @@ import { resolve } from 'path';
 
 interface RichDiffMeta { createdAtIso: string; }
 interface RichItem { id: string; fileId: string; kind: string; headline: string; whatChanged: string; importance: number; risk: number; confidence: number }
-interface RichDiffDoc { meta: RichDiffMeta; summary: { headline: string; narrative: string; totals: { filesChanged: number; additions: number; deletions: number; clusters: number } }; items: RichItem[] }
+interface Cluster { id: string; title: string; kind: string; description: string; importance: number; risk: number; confidence: number; heuristics: string[]; members: Array<{ itemId: string }>; mermaid?: string }
+interface RichDiffDoc { meta: RichDiffMeta; summary: { headline: string; narrative: string; totals: { filesChanged: number; additions: number; deletions: number; clusters: number } }; clusters?: Cluster[]; items: RichItem[] }
 
 function escapeHtml(input: string): string {
   return input
@@ -71,6 +72,8 @@ class RichDiffHtmlCommand extends Command {
       th { background: #f8fafc; position: sticky; top: 0; }
       h1, h2 { margin: 0.2rem 0 0.6rem; }
       .muted { color: #6b7280; font-size: 0.9rem; }
+      .cluster { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin: 10px 0; }
+      .mermaid { background: #f9fafb; border-radius: 6px; padding: 8px; font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; white-space: pre; overflow-x: auto; }
     `;
 
     return `<!doctype html>
@@ -106,6 +109,18 @@ ${rows}
           </tbody>
         </table>
       </section>
+      ${Array.isArray(doc.clusters) && doc.clusters.length ? `
+      <section>
+        <h2>Clusters</h2>
+        ${doc.clusters.map(c => `
+          <div class="cluster">
+            <div><strong>${escapeHtml(c.title)}</strong> <span class="muted">(${escapeHtml(c.kind)})</span></div>
+            <div>${escapeHtml(c.description)}</div>
+            ${c.mermaid ? `<pre class="mermaid">${escapeHtml(c.mermaid)}</pre>` : ''}
+          </div>
+        `).join('\n')}
+      </section>
+      ` : ''}
     </main>
   </body>
 </html>`;

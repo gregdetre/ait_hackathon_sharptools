@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><!-- PLACEHOLDER: Commit title/description --> - Interactive Commit Visualization</title>
+    <style>
+        /* ==========================================
+           RESET AND BASE STYLES
+           ========================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* ==========================================
+           HEADER SECTION
+           ========================================== */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            /* PLACEHOLDER: Update emoji based on commit type (=€ for feature, = for bugfix, etc.) */
+            content: '=€';
+            position: absolute;
+            font-size: 200px;
+            opacity: 0.1;
+            right: -50px;
+            top: -50px;
+            transform: rotate(-15deg);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }
+
+        .commit-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .commit-stat {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .commit-stat .number {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .commit-stat .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        /* ==========================================
+           BUSINESS VALUE SUMMARY
+           ========================================== */
+        .value-summary {
+            background: #f8f9fa;
+            padding: 40px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .value-summary h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .value-summary > p {
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+
+        .value-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .value-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .value-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .value-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+        .value-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .value-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .value-description {
+            color: #6c757d;
+            line-height: 1.5;
+        }
+
+        /* ==========================================
+           CONTROLS SECTION
+           ========================================== */
+        .controls {
+            padding: 20px 40px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+            border: 1px solid #dee2e6;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 300px;
+            padding: 10px 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* ==========================================
+           IMPACT ANALYSIS SECTION
+           ========================================== */
+        .impact-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 40px;
+            margin: 20px 40px;
+            border-radius: 12px;
+        }
+
+        .impact-title {
+            font-size: 1.8em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .impact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .impact-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .impact-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .impact-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        /* ==========================================
+           CHANGES SECTION (Categories and Files)
+           ========================================== */
+        .changes-section {
+            padding: 40px;
+        }
+
+        .change-category {
+            margin-bottom: 30px;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .change-category.collapsed .category-content {
+            display: none;
+        }
+
+        .category-header {
+            background: #f8f9fa;
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.3s ease;
+        }
+
+        .category-header:hover {
+            background: #e9ecef;
+        }
+
+        .category-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .category-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .category-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .category-stats {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stat-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .additions {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .deletions {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .expand-icon {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .change-category.collapsed .expand-icon {
+            transform: rotate(-90deg);
+        }
+
+        .category-content {
+            padding: 20px;
+        }
+
+        .file-change {
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .file-header {
+            background: #f8f9fa;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .file-header:hover {
+            background: #e9ecef;
+        }
+
+        .file-name {
+            font-family: 'Courier New', monospace;
+            font-weight: 500;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-icon {
+            color: #667eea;
+        }
+
+        .file-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 0.85em;
+        }
+
+        /* ==========================================
+           CODE DIFF DISPLAY
+           ========================================== */
+        .code-diff {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .file-change.expanded .code-diff {
+            display: block;
+        }
+
+        .diff-line {
+            padding: 2px 10px;
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .diff-add {
+            background: rgba(46, 160, 67, 0.15);
+            color: #22c55e;
+        }
+
+        .diff-remove {
+            background: rgba(248, 81, 73, 0.15);
+            color: #ef4444;
+        }
+
+        .diff-context {
+            color: #8b949e;
+        }
+
+        .diff-header {
+            color: #58a6ff;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        /* ==========================================
+           ANIMATIONS
+           ========================================== */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .highlight {
+            background: yellow;
+            padding: 2px;
+            border-radius: 3px;
+        }
+
+        /* ==========================================
+           RESPONSIVE DESIGN
+           ========================================== */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .value-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .impact-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                padding: 15px 20px;
+            }
+
+            .changes-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ==========================================
+             HEADER SECTION
+             Agent Instructions:
+             - Replace title with commit message or feature name
+             - Update subtitle with brief description
+             - Populate commit stats with actual numbers
+             - Update emoji in ::before based on change type
+             ========================================== -->
+        <div class="header">
+            <h1><!-- PLACEHOLDER: Main feature/commit title --></h1>
+            <div class="subtitle"><!-- PLACEHOLDER: Brief description of what this change accomplishes --></div>
+            <div class="commit-info">
+                <div class="commit-stat">
+                    <div class="number"><!-- PLACEHOLDER: Number of files --></div>
+                    <div class="label">Files Modified</div>
+                </div>
+                <div class="commit-stat">
+                    <div class="number"><!-- PLACEHOLDER: Lines added (e.g., +150) --></div>
+                    <div class="label">Lines Added</div>
+                </div>
+                <div class="commit-stat">
+                    <div class="number"><!-- PLACEHOLDER: Lines removed (e.g., -50) --></div>
+                    <div class="label">Lines Removed</div>
+                </div>
+                <div class="commit-stat">
+                    <div class="number"><!-- PLACEHOLDER: Commit SHA (first 7 chars) --></div>
+                    <div class="label">Commit ID</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             BUSINESS VALUE SUMMARY
+             Agent Instructions:
+             - Create value cards for each major benefit
+             - Use appropriate emojis for value-icon
+             - Keep descriptions user-focused, not technical
+             - Aim for 3-6 value cards
+             ========================================== -->
+        <div class="value-summary">
+            <h2>Business Value Delivered</h2>
+            <p><!-- PLACEHOLDER: One-paragraph summary of the business/user value of these changes --></p>
+
+            <div class="value-grid">
+                <!-- TEMPLATE: Repeat this value-card block for each value proposition -->
+                <div class="value-card">
+                    <div class="value-icon"><!-- PLACEHOLDER: Emoji (e.g., <¯, =€, ¡, =) --></div>
+                    <div class="value-title"><!-- PLACEHOLDER: Value proposition title --></div>
+                    <div class="value-description"><!-- PLACEHOLDER: 1-2 sentence description of the benefit --></div>
+                </div>
+
+                <!-- Example additional value cards (remove or populate as needed) -->
+                <div class="value-card">
+                    <div class="value-icon">=</div>
+                    <div class="value-title">Example Value</div>
+                    <div class="value-description">This is an example - replace with actual value</div>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-icon">™</div>
+                    <div class="value-title">Another Example</div>
+                    <div class="value-description">Replace this with actual content</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             CONTROLS
+             Functional - no changes needed
+             ========================================== -->
+        <div class="controls">
+            <button class="btn btn-primary" onclick="expandAll()">
+                <span>¼</span> Expand All
+            </button>
+            <button class="btn btn-secondary" onclick="collapseAll()">
+                <span>¶</span> Collapse All
+            </button>
+            <input type="text" class="search-box" placeholder="Search changes..." onkeyup="searchChanges(this.value)">
+        </div>
+
+        <!-- ==========================================
+             IMPACT ANALYSIS (Optional)
+             Agent Instructions:
+             - Use for user/stakeholder impact
+             - Each item should be a concrete outcome
+             - Use meaningful emojis
+             - Can be omitted if not applicable
+             ========================================== -->
+        <div class="impact-section">
+            <h2 class="impact-title"><!-- PLACEHOLDER: Impact title (e.g., "User Impact Analysis") --></h2>
+            <div class="impact-grid">
+                <!-- TEMPLATE: Repeat this impact-item block as needed -->
+                <div class="impact-item">
+                    <div class="impact-icon"><!-- PLACEHOLDER: Emoji --></div>
+                    <div class="impact-label"><!-- PLACEHOLDER: Impact description --></div>
+                </div>
+
+                <!-- Examples (replace with actual impacts) -->
+                <div class="impact-item">
+                    <div class="impact-icon">¡</div>
+                    <div class="impact-label">Performance Improvement</div>
+                </div>
+                <div class="impact-item">
+                    <div class="impact-icon">=</div>
+                    <div class="impact-label">Enhanced Security</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             CHANGES SECTION
+             Agent Instructions:
+             - Group related file changes into categories
+             - Each category should have a clear theme
+             - Include file paths and diff summaries
+             - Use appropriate icons for categories
+             ========================================== -->
+        <div class="changes-section">
+            <!-- TEMPLATE: Repeat this change-category block for each category of changes -->
+            <div class="change-category" id="category-1">
+                <div class="category-header" onclick="toggleCategory('category-1')">
+                    <div class="category-info">
+                        <div class="category-icon"><!-- PLACEHOLDER: Category emoji (e.g., =
+, =Ê, <, ™) --></div>
+                        <div class="category-title"><!-- PLACEHOLDER: Category name (e.g., "API Enhancements") --></div>
+                    </div>
+                    <div class="category-stats">
+                        <span class="stat-badge additions"><!-- PLACEHOLDER: +N lines --></span>
+                        <span class="stat-badge deletions"><!-- PLACEHOLDER: -N lines --></span>
+                        <span class="expand-icon">¼</span>
+                    </div>
+                </div>
+                <div class="category-content">
+                    <p style="margin-bottom: 20px; color: #6c757d;">
+                        <!-- PLACEHOLDER: Brief description of what this category of changes accomplishes -->
+                    </p>
+
+                    <!-- TEMPLATE: Repeat this file-change block for each file in the category -->
+                    <div class="file-change" id="file-1-1">
+                        <div class="file-header" onclick="toggleFile('file-1-1')">
+                            <div class="file-name">
+                                <span class="file-icon">=Ä</span>
+                                <!-- PLACEHOLDER: Full file path (e.g., frontend/src/components/Button.tsx) -->
+                            </div>
+                            <div class="file-stats">
+                                <span class="stat-badge additions"><!-- PLACEHOLDER: +N --></span>
+                                <span class="stat-badge deletions"><!-- PLACEHOLDER: -N --></span>
+                            </div>
+                        </div>
+                        <div class="code-diff">
+                            <div class="diff-header"><!-- PLACEHOLDER: @@ Description of changes @@ --></div>
+                            <!-- TEMPLATE: Add diff lines as needed -->
+                            <div class="diff-remove"><!-- PLACEHOLDER: - removed line --></div>
+                            <div class="diff-add"><!-- PLACEHOLDER: + added line --></div>
+                            <div class="diff-context"><!-- PLACEHOLDER: context line --></div>
+
+                            <!-- Example diff (replace with actual diff) -->
+                            <div class="diff-header">@@ Key Changes @@</div>
+                            <div class="diff-remove">- old implementation</div>
+                            <div class="diff-add">+ new implementation</div>
+                            <div class="diff-context">  unchanged context</div>
+                        </div>
+                    </div>
+
+                    <!-- Add more file-change blocks as needed -->
+                </div>
+            </div>
+
+            <!-- Example second category (replace or remove as needed) -->
+            <div class="change-category collapsed" id="category-2">
+                <div class="category-header" onclick="toggleCategory('category-2')">
+                    <div class="category-info">
+                        <div class="category-icon">=Ê</div>
+                        <div class="category-title">Example Category</div>
+                    </div>
+                    <div class="category-stats">
+                        <span class="stat-badge additions">+0 lines</span>
+                        <span class="stat-badge deletions">-0 lines</span>
+                        <span class="expand-icon">¼</span>
+                    </div>
+                </div>
+                <div class="category-content">
+                    <p style="margin-bottom: 20px; color: #6c757d;">
+                        Replace this with actual category description
+                    </p>
+                    <!-- Add file-change blocks here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         JAVASCRIPT FUNCTIONALITY
+         Agent Instructions:
+         - These functions handle interactivity
+         - No changes needed unless adding features
+         - IDs must match those in HTML above
+         ========================================== -->
+    <script>
+        // Initialize animations on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Animate value cards on load
+            document.querySelectorAll('.value-card').forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('animate-in');
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        card.style.transition = 'all 0.5s ease';
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 50);
+                }, index * 100);
+            });
+        });
+
+        // Toggle category expansion
+        function toggleCategory(id) {
+            const category = document.getElementById(id);
+            category.classList.toggle('collapsed');
+        }
+
+        // Toggle file diff expansion
+        function toggleFile(id) {
+            const file = document.getElementById(id);
+            file.classList.toggle('expanded');
+        }
+
+        // Expand all sections and diffs
+        function expandAll() {
+            document.querySelectorAll('.change-category').forEach(cat => {
+                cat.classList.remove('collapsed');
+            });
+            document.querySelectorAll('.file-change').forEach(file => {
+                file.classList.add('expanded');
+            });
+        }
+
+        // Collapse all sections and diffs
+        function collapseAll() {
+            document.querySelectorAll('.change-category').forEach(cat => {
+                cat.classList.add('collapsed');
+            });
+            document.querySelectorAll('.file-change').forEach(file => {
+                file.classList.remove('expanded');
+            });
+        }
+
+        // Search functionality
+        function searchChanges(query) {
+            const lowerQuery = query.toLowerCase();
+            const allElements = document.querySelectorAll('.file-change, .change-category');
+
+            if (!query) {
+                // Show all elements if search is empty
+                allElements.forEach(el => {
+                    el.style.display = 'block';
+                    // Remove any existing highlights
+                    el.innerHTML = el.innerHTML.replace(/<span class="highlight">(.*?)<\/span>/gi, '$1');
+                });
+                return;
+            }
+
+            allElements.forEach(el => {
+                const text = el.textContent.toLowerCase();
+                if (text.includes(lowerQuery)) {
+                    el.style.display = 'block';
+                    // Expand parent category if it's a file
+                    if (el.classList.contains('file-change')) {
+                        const parent = el.closest('.change-category');
+                        if (parent) {
+                            parent.classList.remove('collapsed');
+                        }
+                    }
+                } else {
+                    el.style.display = searchQuery ? 'none' : 'block';
+                }
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Skip if user is typing in search box
+            if (e.target.tagName === 'INPUT') return;
+
+            // Ctrl/Cmd + E to expand all
+            if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                e.preventDefault();
+                expandAll();
+            }
+            // Ctrl/Cmd + K to collapse all
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                collapseAll();
+            }
+            // Ctrl/Cmd + F to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                document.querySelector('.search-box').focus();
+            }
+        });
+
+        // Add smooth scroll behavior for anchors
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Progress animation on scroll (for impact items)
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.impact-item').forEach(item => {
+            observer.observe(item);
+        });
+
+        // Optional: Add functionality to dynamically update content
+        // Agent can call these functions to update the page
+
+        /**
+         * Update header information
+         * @param {Object} data - Header data with title, subtitle, and stats
+         */
+        function updateHeader(data) {
+            if (data.title) {
+                document.querySelector('.header h1').textContent = data.title;
+            }
+            if (data.subtitle) {
+                document.querySelector('.header .subtitle').textContent = data.subtitle;
+            }
+            if (data.stats) {
+                const statElements = document.querySelectorAll('.commit-stat .number');
+                if (data.stats.files !== undefined) statElements[0].textContent = data.stats.files;
+                if (data.stats.additions !== undefined) statElements[1].textContent = data.stats.additions;
+                if (data.stats.deletions !== undefined) statElements[2].textContent = data.stats.deletions;
+                if (data.stats.commitId !== undefined) statElements[3].textContent = data.stats.commitId;
+            }
+        }
+
+        /**
+         * Add a value card to the business value section
+         * @param {Object} card - Card data with icon, title, and description
+         */
+        function addValueCard(card) {
+            const valueGrid = document.querySelector('.value-grid');
+            const cardHTML = `
+                <div class="value-card animate-in">
+                    <div class="value-icon">${card.icon || '<¯'}</div>
+                    <div class="value-title">${card.title}</div>
+                    <div class="value-description">${card.description}</div>
+                </div>
+            `;
+            valueGrid.insertAdjacentHTML('beforeend', cardHTML);
+        }
+
+        /**
+         * Add a change category with files
+         * @param {Object} category - Category data with title, icon, files, etc.
+         */
+        function addChangeCategory(category) {
+            const changesSection = document.querySelector('.changes-section');
+            const categoryId = `category-${Date.now()}`;
+
+            let filesHTML = '';
+            if (category.files) {
+                category.files.forEach((file, index) => {
+                    const fileId = `${categoryId}-file-${index}`;
+                    filesHTML += `
+                        <div class="file-change" id="${fileId}">
+                            <div class="file-header" onclick="toggleFile('${fileId}')">
+                                <div class="file-name">
+                                    <span class="file-icon">=Ä</span>
+                                    ${file.path}
+                                </div>
+                                <div class="file-stats">
+                                    <span class="stat-badge additions">+${file.additions || 0}</span>
+                                    <span class="stat-badge deletions">-${file.deletions || 0}</span>
+                                </div>
+                            </div>
+                            <div class="code-diff">
+                                ${file.diff || '<div class="diff-context">No diff available</div>'}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            const categoryHTML = `
+                <div class="change-category" id="${categoryId}">
+                    <div class="category-header" onclick="toggleCategory('${categoryId}')">
+                        <div class="category-info">
+                            <div class="category-icon">${category.icon || '=Á'}</div>
+                            <div class="category-title">${category.title}</div>
+                        </div>
+                        <div class="category-stats">
+                            <span class="stat-badge additions">+${category.totalAdditions || 0} lines</span>
+                            <span class="stat-badge deletions">-${category.totalDeletions || 0} lines</span>
+                            <span class="expand-icon">¼</span>
+                        </div>
+                    </div>
+                    <div class="category-content">
+                        <p style="margin-bottom: 20px; color: #6c757d;">
+                            ${category.description || ''}
+                        </p>
+                        ${filesHTML}
+                    </div>
+                </div>
+            `;
+
+            changesSection.insertAdjacentHTML('beforeend', categoryHTML);
+        }
+
+        // Log that the page is ready for data
+        console.log('Commit Diff Visualizer Template Ready');
+        console.log('Available update functions: updateHeader(), addValueCard(), addChangeCategory()');
+    </script>
+</body>
+</html>

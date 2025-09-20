@@ -21,7 +21,7 @@ class GitDiffAnalyzerServer {
     this.config = config;
     this.server = http.createServer(this.handleHttpRequest.bind(this));
     this.wss = new WebSocketServer({ server: this.server });
-    this.gitMonitor = new GitMonitor(config.gitMonitor);
+    this.gitMonitor = new GitMonitor(config.gitMonitor, config.repomix);
     this.llmProcessor = new LLMProcessor(config.llm);
 
     this.setupWebSocket();
@@ -82,12 +82,34 @@ class GitDiffAnalyzerServer {
  
       // Process with LLM
       try {
-        const analyses = await this.llmProcessor.processGitDiff(diffData);
-        this.currentAnalyses = analyses;
-        this.broadcast({ 
-          type: 'analysis-update',
-          data: analyses
-        });
+        // Clear current analyses and start fresh
+        this.currentAnalyses = [];
+        
+        // Remove any existing listeners to prevent duplicates
+        this.llmProcessor.removeAllListeners('analysis-complete');
+        
+        // Listen for individual analysis completion
+        const analysisHandler = (analysis: AnalysisResult) => {
+          this.currentAnalyses.push(analysis);
+          this.broadcast({ 
+            type: 'analysis-update',
+            data: [analysis] // Send single analysis instead of array
+          });
+          console.log(`📤 Broadcasted analysis: ${analysis.type}`);
+        };
+        
+        this.llmProcessor.on('analysis-complete', analysisHandler);
+        
+        // Start processing (this will emit events as analyses complete)
+        await this.llmProcessor.processGitDiff(diffData);
+        
+        // Clean up the listener
+        this.llmProcessor.removeListener('analysis-complete', analysisHandler);
+        
+        // Notify GitMonitor that processing is complete
+        this.gitMonitor.notifyLLMProcessingComplete();
+        
+        console.log(`✅ Completed all analyses: ${this.currentAnalyses.length} total`);
       } catch (error) {
         console.error('Error processing diff with LLM:', error);
         // Send LLM processing error to clients
@@ -101,25 +123,12 @@ class GitDiffAnalyzerServer {
           }
         });
         console.log('✅ LLM error broadcast sent');
+        
+        // Notify GitMonitor that processing is complete (even on error)
+        this.gitMonitor.notifyLLMProcessingComplete();
       }
     });
 
-    // Handle large diffs
-    this.gitMonitor.on('diff-too-large', (diffData: GitDiffData) => {
-      console.log('🚨 Git diff too large, rejecting analysis');
-      this.broadcast({
-        type: 'diff-too-large',
-        data: {
-          error: 'Git diff is too large for analysis',
-          diffSize: diffData.diffText.length,
-          maxSize: 50000,
-          timestamp: new Date(),
-          fileCount: diffData.fileCount,
-          additions: diffData.additions,
-          deletions: diffData.deletions
-        }
-      });
-    });
 
     this.gitMonitor.on('error', (error) => {
       console.error('GitMonitor error:', error);

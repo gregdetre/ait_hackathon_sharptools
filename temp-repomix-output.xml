@@ -1,0 +1,1796 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files and files not matching ignore patterns, combined into a single document by Repomix.
+The content has been processed where content has been compressed (code blocks are separated by ⋮---- delimiter).
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: **/*.py, **/*.ts
+- Files matching these patterns are excluded: **/node_modules/**, **/.git/**, **/dist/**, **/build/**
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Content has been compressed - code blocks are separated by ⋮---- delimiter
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+sharptools/
+  claude-conversation-exporter/
+    commands/
+      export.ts
+    services/
+      sessionFinder.ts
+      sessionParser.ts
+    types/
+      diff-schemas.ts
+    index.ts
+    types.ts
+  diff/
+    basic-diff.ts
+    pipeline.ts
+    rich-diff-html.ts
+    rich-diff-llm.ts
+    rich-diff.ts
+    ts-preenrich.ts
+  git-diff-analyzer/
+    src/
+      server/
+        git-monitor.ts
+        index.ts
+        llm-processor.ts
+        repomix-service.ts
+        template-processor.ts
+      shared/
+        types.ts
+  chat-server.ts
+  config.ts
+  generate-mermaid-diagram.ts
+  git-diff-html.ts
+  git-diff.ts
+  markdown-to-html.ts
+tests/
+  basic-diff.commit.e8f3a986.test.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="sharptools/git-diff-analyzer/src/server/template-processor.ts">
+import { promises as fs } from 'fs';
+import path from 'path';
+import nunjucks from 'nunjucks';
+import { GitDiffData } from '../shared/types';
+⋮----
+export interface TemplateContext {
+  meta_json: string;
+  file_json: string;
+  hunk_json: string;
+  tsEntities_json: string;
+  hints_json: string;
+  totals_json: string;
+  pathTags_json: string;
+  items_json: string;
+  cluster_json: string;
+}
+⋮----
+export class TemplateProcessor
+⋮----
+constructor(templatesPath: string)
+⋮----
+// Configure nunjucks environment
+⋮----
+// Add custom filters
+⋮----
+/**
+   * Process a template file with the given context
+   */
+async processTemplate(templateName: string, context: Partial<TemplateContext>): Promise<string>
+⋮----
+// Check cache first
+⋮----
+// Load template
+⋮----
+// Render template
+⋮----
+// Cache the result
+⋮----
+/**
+   * Create context for Pass A (item extraction) template
+   */
+createPassAContext(diffData: GitDiffData, fileId: string, hunkId: string, hunkData: any): TemplateContext
+⋮----
+// These are not used in Pass A but required by interface
+⋮----
+/**
+   * Create context for Pass B (clustering) template
+   */
+createPassBContext(diffData: GitDiffData, items: any[]): TemplateContext
+⋮----
+// These are not used in Pass B but required by interface
+⋮----
+/**
+   * Create context for Pass C (diagram) template
+   */
+createPassCContext(cluster: any, items: any[]): TemplateContext
+⋮----
+// These are not used in Pass C but required by interface
+⋮----
+/**
+   * Extract operations from diff content
+   */
+private extractOperations(content: string): string[]
+⋮----
+// Detect specific operation types
+⋮----
+/**
+   * Extract TypeScript entities from content
+   */
+private extractTypeScriptEntities(content: string): any
+⋮----
+// Extract function/class names
+⋮----
+// Extract exports
+⋮----
+// Extract imports
+⋮----
+/**
+   * Check if content has public API changes
+   */
+private hasPublicApi(content: string): boolean
+⋮----
+/**
+   * Check if content has security-related changes
+   */
+private hasSecurityChanges(content: string): boolean
+⋮----
+/**
+   * Check if content has performance-related changes
+   */
+private hasPerformanceChanges(content: string): boolean
+⋮----
+/**
+   * Estimate complexity of changes
+   */
+private estimateComplexity(content: string): string
+⋮----
+/**
+   * Get file type from path
+   */
+private getFileType(filePath: string): string
+⋮----
+/**
+   * Extract path tags from diff data
+   */
+private extractPathTags(diffData: GitDiffData): any
+⋮----
+// Extract file paths and categorize them
+⋮----
+/**
+   * Clear template cache
+   */
+clearCache(): void
+</file>
+
+<file path="sharptools/claude-conversation-exporter/commands/export.ts">
+import { Command, Option } from 'clipanion';
+⋮----
+import { SessionFinder } from '../services/sessionFinder';
+import { SessionParser } from '../services/sessionParser';
+import { ExportMode, SessionData } from '../types';
+⋮----
+export class ExportCommand extends Command {
+⋮----
+async execute()
+⋮----
+// Resolve paths
+⋮----
+// Check if exporting all projects
+⋮----
+// Validate mode
+⋮----
+// Map string mode to enum
+⋮----
+// Find session directory
+⋮----
+// List all sessions mode
+⋮----
+// Export all projects mode
+⋮----
+// Create output directory
+⋮----
+// Create project subdirectory
+⋮----
+// Parse sessions for this project
+⋮----
+// Create global summary file
+⋮----
+// Single project export (existing logic)
+⋮----
+// Parse sessions
+⋮----
+// Create output directory
+⋮----
+// Export sessions
+⋮----
+// Create summary file
+</file>
+
+<file path="sharptools/claude-conversation-exporter/services/sessionFinder.ts">
+export class SessionFinder {
+⋮----
+constructor(verbose: boolean = false)
+⋮----
+private log(message: string): void
+⋮----
+private encodePath(projectPath: string): string
+⋮----
+private getClaudeHomes(): string[]
+⋮----
+public findSessionDirectory(projectPath: string): string
+⋮----
+// Try to find partial matches
+⋮----
+public listAllSessions(): Map<string, string[]>
+</file>
+
+<file path="sharptools/claude-conversation-exporter/services/sessionParser.ts">
+import { Message, MessageRole, ExportMode, SessionData, ClaudeMessage } from '../types';
+⋮----
+export class SessionParser {
+⋮----
+constructor(exportMode: ExportMode = ExportMode.FULL_CONVERSATION, verbose: boolean = false)
+⋮----
+private log(message: string): void
+⋮----
+private parseMessage(data: ClaudeMessage, index: number): Message | null
+⋮----
+// Convert content to string if needed
+⋮----
+// For non-string content, stringify it
+⋮----
+private shouldIncludeMessage(message: Message): boolean
+⋮----
+public parseSession(sessionPath: string): SessionData | null
+⋮----
+public parseDirectory(directory: string): SessionData[]
+</file>
+
+<file path="sharptools/claude-conversation-exporter/types/diff-schemas.ts">
+/**
+ * Diff Visualizer Data Structures
+ *
+ * This module defines the TypeScript types for the two-layer diff model:
+ * 1) BasicDiff: A deterministic, lossless representation of a Git text diff
+ * 2) RichDiff:  An LLM-augmented, value-focused interpretation layered on top
+ *
+ * Design goals:
+ * - BasicDiff must be faithful to git diff semantics and stable for UI anchoring
+ * - RichDiff references BasicDiff by IDs only; it never duplicates patch text
+ * - Optional attachments (e.g., code context) are embedded near their owners
+ * - All IDs should be deterministic for stable hyperlinks and caching
+ */
+⋮----
+// ------------------------------
+// Basic Diff Layer (deterministic)
+// ------------------------------
+⋮----
+export type ColorMode = 'auto' | 'always' | 'never';
+export type LineOp = 'context' | 'add' | 'del';
+⋮----
+/**
+ * Reference to a Git blob.
+ * `oid` is typically the 40-hex SHA1 or repository hash; `ref` may capture a ref name.
+ */
+export interface BlobRef {
+  oid?: string;
+  ref?: string;
+  size?: number;
+}
+⋮----
+/**
+ * Optional file-level attachments that are expensive or large. Off by default.
+ */
+export interface FileAttachments {
+  /** Raw blob identities for before/after to enable on-demand fetching. */
+  blobs?: {
+    before?: BlobRef;
+    after?: BlobRef;
+  };
+  /** Optional entire file snapshots (use size caps; avoid by default). */
+  fileSnapshot?: {
+    before?: string;
+    after?: string;
+    sizeCap?: number;
+    truncated?: boolean;
+  };
+}
+⋮----
+/** Raw blob identities for before/after to enable on-demand fetching. */
+⋮----
+/** Optional entire file snapshots (use size caps; avoid by default). */
+⋮----
+/**
+ * Optional hunk-level attachments.
+ */
+export interface HunkAttachments {
+  /**
+   * Surrounding source code lines from base/head checkouts.
+   * Include only when configured (e.g., radius=20). Lines do not include trailing newlines.
+   */
+  context?: {
+    radius: number;
+    before?: string[];
+    after?: string[];
+  };
+}
+⋮----
+/**
+   * Surrounding source code lines from base/head checkouts.
+   * Include only when configured (e.g., radius=20). Lines do not include trailing newlines.
+   */
+⋮----
+export interface HunkLine {
+  /** Stable sequence-local identifier for cross-referencing. */
+  id: string;
+  op: LineOp;
+  /** Content of the line without trailing newline. */
+  text: string;
+  /** Original line number in the old file; null where not applicable. */
+  oldNumber?: number | null;
+  /** New line number in the new file; null where not applicable. */
+  newNumber?: number | null;
+  /** Present when word-diff parsing is active; spans within `text`. */
+  intraLine?: Array<{ kind: 'eq' | 'ins' | 'del'; start: number; end: number }>;
+  /** True when the diff notes "No newline at end of file". */
+  noNewlineAtEndOfFile?: boolean;
+}
+⋮----
+/** Stable sequence-local identifier for cross-referencing. */
+⋮----
+/** Content of the line without trailing newline. */
+⋮----
+/** Original line number in the old file; null where not applicable. */
+⋮----
+/** New line number in the new file; null where not applicable. */
+⋮----
+/** Present when word-diff parsing is active; spans within `text`. */
+⋮----
+/** True when the diff notes "No newline at end of file". */
+⋮----
+export interface Hunk {
+  /** Deterministic hunk identifier within a file. */
+  id: string;
+  oldStart: number;
+  oldLines: number;
+  newStart: number;
+  newLines: number;
+  /** Content hash for caching (e.g., sha256 of normalized header+lines). */
+  contentHash?: string;
+  /** Optional text that appears after the @@ header (function/scope hint). */
+  sectionHeading?: string;
+  lines: HunkLine[];
+  /** Raw hunk header, e.g., "@@ -a,b +c,d @@ optional". */
+  rawHeader?: string;
+  attachments?: HunkAttachments;
+}
+⋮----
+/** Deterministic hunk identifier within a file. */
+⋮----
+/** Content hash for caching (e.g., sha256 of normalized header+lines). */
+⋮----
+/** Optional text that appears after the @@ header (function/scope hint). */
+⋮----
+/** Raw hunk header, e.g., "@@ -a,b +c,d @@ optional". */
+⋮----
+export type FileStatus =
+  | 'added'
+  | 'modified'
+  | 'deleted'
+  | 'renamed'
+  | 'copied'
+  | 'modeChanged'
+  | 'typeChanged'
+  | 'unmerged'
+  | 'unknown';
+⋮----
+export interface FileDiff {
+  /** Deterministic across runs for the same file change; used as a stable anchor. */
+  id: string;
+  pathOld?: string;
+  pathNew?: string;
+  status: FileStatus;
+  isBinary: boolean;
+  /** Best-effort language by file extension, e.g., "ts", "tsx". */
+  language?: string;
+  /** For rename/copy cases. */
+  similarityIndex?: number;
+  modeBefore?: string;
+  modeAfter?: string;
+  stats: { additions: number; deletions: number; hunks: number };
+  hunks: Hunk[];
+  /** Raw per-file patch text for recovery/fallback. */
+  rawPatch?: string;
+  /** Optional attachments (blobs, snapshots). */
+  attachments?: FileAttachments;
+}
+⋮----
+/** Deterministic across runs for the same file change; used as a stable anchor. */
+⋮----
+/** Best-effort language by file extension, e.g., "ts", "tsx". */
+⋮----
+/** For rename/copy cases. */
+⋮----
+/** Raw per-file patch text for recovery/fallback. */
+⋮----
+/** Optional attachments (blobs, snapshots). */
+⋮----
+export interface BasicDiff {
+  meta: {
+    createdAtIso: string;
+    tool: { name: 'git-diff.ts'; version: string };
+    cwd: string;
+    git: {
+      baseRef?: string;
+      headRef?: string;
+      rangeArg?: string; // e.g., "abc..def" if provided
+      staged: boolean;
+      args: string[]; // exact args used
+      colorMode: ColorMode;
+      wordDiff: boolean;
+      nameOnly: boolean;
+      stat: boolean;
+      unifiedContext?: number;
+    };
+  };
+  totals: {
+    filesChanged: number;
+    additions: number;
+    deletions: number;
+    hunks: number;
+    binaryFilesChanged: number;
+  };
+  files: FileDiff[];
+  warnings?: string[];
+}
+⋮----
+rangeArg?: string; // e.g., "abc..def" if provided
+⋮----
+args: string[]; // exact args used
+⋮----
+// ------------------------------
+// Rich Diff Layer (LLM-augmented)
+// ------------------------------
+⋮----
+export type ChangeKind =
+  | 'feature'
+  | 'fix'
+  | 'refactor'
+  | 'perf'
+  | 'security'
+  | 'docs'
+  | 'test'
+  | 'build'
+  | 'config'
+  | 'chore';
+⋮----
+export type Importance = 1 | 2 | 3 | 4 | 5;
+export type Risk = 1 | 2 | 3 | 4 | 5;
+⋮----
+export interface EvidenceRef {
+  fileId: string;
+  hunkId?: string;
+  lineIds?: string[];
+}
+⋮----
+export interface Callout {
+  id: string;
+  title: string;
+  whyItMatters: string;
+  importance: Importance;
+  risk: Risk;
+  /** LLM self-estimate 0..1. */
+  confidence: number;
+  references: EvidenceRef[];
+}
+⋮----
+/** LLM self-estimate 0..1. */
+⋮----
+export interface Operation {
+  op:
+    | 'addFunction'
+    | 'removeFunction'
+    | 'changeSignature'
+    | 'addExport'
+    | 'removeExport'
+    | 'renameSymbol'
+    | 'moveFile'
+    | 'changeLogic'
+    | 'addDependency'
+    | 'updateConfig'
+    | 'changeRoute'
+    | 'changeSchema'
+    | 'updateTest'
+    | 'updateDocs';
+  details?: string;
+}
+⋮----
+export interface Entities {
+  /** Symbols detected (TypeScript identifiers: functions, classes, vars). */
+  symbols?: string[];
+  /** Exported identifiers added/removed/changed. */
+  exports?: string[];
+  /** HTTP endpoints inferred from routing patterns (if applicable). */
+  routes?: Array<{ method: string; path: string }>;
+  /** Database or schema entities (names). */
+  tables?: string[];
+  /** Normalized relative file paths referenced. */
+  filesTouched?: string[];
+  /** Configuration keys referenced or modified. */
+  configKeys?: string[];
+}
+⋮----
+/** Symbols detected (TypeScript identifiers: functions, classes, vars). */
+⋮----
+/** Exported identifiers added/removed/changed. */
+⋮----
+/** HTTP endpoints inferred from routing patterns (if applicable). */
+⋮----
+/** Database or schema entities (names). */
+⋮----
+/** Normalized relative file paths referenced. */
+⋮----
+/** Configuration keys referenced or modified. */
+⋮----
+export interface Highlight {
+  tag:
+    | 'breaking'
+    | 'publicApi'
+    | 'securitySensitive'
+    | 'perfCritical'
+    | 'infra'
+    | 'lowConfidence';
+  note?: string;
+}
+⋮----
+export interface RenderHints {
+  emphasis?: Array<'apis' | 'security' | 'perf' | 'breaking' | 'routes'>;
+  preferredView?: 'byKind' | 'byRisk' | 'byImportance' | 'byLayer';
+}
+⋮----
+export interface RichItem {
+  id: string;
+  fileId: string;
+  /** If absent, the item summarizes the whole file. */
+  hunkId?: string;
+  kind: ChangeKind;
+  headline: string; // e.g., "Change signature of export validateSession(...)"
+  whatChanged: string; // concise narrative of the diff
+  whyChanged?: string; // rationale if inferable
+  operations?: Operation[]; // structured semantic ops
+  entities?: Entities; // extracted symbols/routes/etc.
+  highlights?: Highlight[];
+  importance: Importance;
+  risk: Risk;
+  confidence: number; // 0..1
+  evidence: EvidenceRef[]; // anchors back to BasicDiff
+  renderHints?: RenderHints;
+}
+⋮----
+/** If absent, the item summarizes the whole file. */
+⋮----
+headline: string; // e.g., "Change signature of export validateSession(...)"
+whatChanged: string; // concise narrative of the diff
+whyChanged?: string; // rationale if inferable
+operations?: Operation[]; // structured semantic ops
+entities?: Entities; // extracted symbols/routes/etc.
+⋮----
+confidence: number; // 0..1
+evidence: EvidenceRef[]; // anchors back to BasicDiff
+⋮----
+export interface Cluster {
+  id: string;
+  title: string; // value/intent-oriented headline
+  kind: ChangeKind;
+  description: string; // business value narrative
+  importance: Importance;
+  risk: Risk;
+  confidence: number; // 0..1
+  heuristics: string[]; // short notes explaining grouping rationale
+  members: Array<{ itemId: string }>;
+  /** Optional Mermaid diagram describing the change (flow/seq/class). */
+  mermaid?: string;
+}
+⋮----
+title: string; // value/intent-oriented headline
+⋮----
+description: string; // business value narrative
+⋮----
+confidence: number; // 0..1
+heuristics: string[]; // short notes explaining grouping rationale
+⋮----
+/** Optional Mermaid diagram describing the change (flow/seq/class). */
+⋮----
+export interface Relation {
+  kind: 'dependsOn' | 'affects' | 'duplicates' | 'renames' | 'followsFrom';
+  from: { itemId: string };
+  to: { itemId: string };
+  note?: string;
+}
+⋮----
+export interface Views {
+  byKind?: Record<ChangeKind, string[]>; // cluster ids
+  byRisk?: Record<Risk, string[]>;
+  byImportance?: Record<Importance, string[]>;
+  byLayer?: Record<'frontend' | 'backend' | 'infra' | 'tests' | 'docs', string[]>;
+}
+⋮----
+byKind?: Record<ChangeKind, string[]>; // cluster ids
+⋮----
+export interface TraceAnchor {
+  anchorId: string; // usable in markdown prose
+  refs: EvidenceRef[];
+}
+⋮----
+anchorId: string; // usable in markdown prose
+⋮----
+export interface Trace {
+  anchors: TraceAnchor[];
+}
+⋮----
+export interface RichDiff {
+  meta: {
+    createdAtIso: string;
+    model: { provider: 'openai' | 'anthropic' | 'local'; name: string };
+    promptVersion: string;
+    basicDiffRef: { hash: string }; // content-hash of the BasicDiff input
+    goalRef?: { planningDocPath?: string; goalSummary?: string };
+  };
+  summary: {
+    headline: string;
+    narrative: string;
+    keyCallouts: Callout[];
+    totals: { filesChanged: number; additions: number; deletions: number; clusters: number };
+  };
+  clusters: Cluster[];
+  items: RichItem[]; // narrative per file/hunk
+  relations?: Relation[];
+  views?: Views; // precomputed indices for UI
+  trace?: Trace; // mapping from prose anchors to code evidence
+  warnings?: string[];
+}
+⋮----
+basicDiffRef: { hash: string }; // content-hash of the BasicDiff input
+⋮----
+items: RichItem[]; // narrative per file/hunk
+⋮----
+views?: Views; // precomputed indices for UI
+trace?: Trace; // mapping from prose anchors to code evidence
+⋮----
+/**
+ * Exported namespace-like object for convenient imports.
+ */
+</file>
+
+<file path="sharptools/claude-conversation-exporter/index.ts">
+import { Cli, Builtins } from 'clipanion';
+import { ExportCommand } from './commands/export';
+⋮----
+// Register commands
+⋮----
+// Run the CLI
+</file>
+
+<file path="sharptools/claude-conversation-exporter/types.ts">
+export enum MessageRole {
+  USER = 'user',
+  ASSISTANT = 'assistant',
+  SYSTEM = 'system'
+}
+⋮----
+export enum ExportMode {
+  PROMPTS_ONLY = 'prompts',
+  OUTPUTS_ONLY = 'outputs',
+  FULL_CONVERSATION = 'full'
+}
+⋮----
+export interface Message {
+  role: MessageRole;
+  content: string;
+  timestamp: string;
+  index: number;
+}
+⋮----
+export interface SessionData {
+  sessionId: string;
+  messages: Message[];
+  stats: {
+    userMessages: number;
+    assistantMessages: number;
+    systemMessages: number;
+    totalMessages: number;
+  };
+  projectPath: string;
+  exportedAt: string;
+}
+⋮----
+export interface ExportOptions {
+  projectPath: string;
+  outputDir: string;
+  exportMode: ExportMode;
+  verbose: boolean;
+}
+⋮----
+export interface ClaudeMessage {
+  message: {
+    role: string;
+    content: string | any;
+  };
+  timestamp?: string;
+}
+</file>
+
+<file path="sharptools/diff/rich-diff.ts">
+/**
+ * Rich Diff Generator (LLM-augmented placeholder)
+ *
+ * Consumes a BasicDiff JSON and an optional enrichment bundle, then produces a
+ * skeleton RichDiff document. The LLM-based itemization and clustering are
+ * intentionally stubbed for now; we compute simple heuristics and structure.
+ */
+⋮----
+import { Cli, Command, Option } from 'clipanion';
+import { readFile, writeFile } from 'fs/promises';
+import { resolve } from 'path';
+import type { BasicDiff, RichDiff, Callout, Cluster, RichItem, EvidenceRef } from '../claude-conversation-exporter/types/diff-schemas';
+⋮----
+interface EnrichmentBundle { files?: Record<string, any>; hunks?: Record<string, any> }
+⋮----
+function nowIso(): string
+⋮----
+function toEvidenceForFile(fileId: string): EvidenceRef
+⋮----
+class RichDiffCommand extends Command {
+⋮----
+async execute(): Promise<number>
+</file>
+
+<file path="sharptools/diff/ts-preenrich.ts">
+/**
+ * TypeScript Pre-enrichment (Deterministic)
+ *
+ * Reads a BasicDiff JSON, fetches before/after file contents for TS/TSX files,
+ * extracts shallow symbols/exports via regex (Tree-sitter optional in future),
+ * computes simple churn metrics, and tags files by layer via path heuristics.
+ *
+ * Output: JSON bundle keyed by fileId and hunkId.
+ */
+⋮----
+import { Cli, Command, Option } from 'clipanion';
+import { readFile, writeFile } from 'fs/promises';
+import { resolve } from 'path';
+import { spawn } from 'child_process';
+import type { BasicDiff, FileDiff } from '../claude-conversation-exporter/types/diff-schemas';
+⋮----
+type Layer = 'frontend' | 'backend' | 'tests' | 'docs' | 'unknown';
+⋮----
+interface FileEnrichment {
+  fileId: string;
+  layer: Layer;
+  symbols?: string[];
+  exports?: string[];
+  churn: { additions: number; deletions: number; hunks: number };
+}
+⋮----
+interface HunkEnrichment {
+  fileId: string;
+  hunkId: string;
+  symbolsNearChange?: string[];
+}
+⋮----
+interface EnrichmentBundle {
+  createdAtIso: string;
+  source: { basicDiffFile?: string };
+  files: Record<string, FileEnrichment>;
+  hunks: Record<string, HunkEnrichment>;
+}
+⋮----
+function nowIso(): string
+⋮----
+async function runCapture(command: string, args: string[]): Promise<{ code: number; stdout: string; stderr: string }>
+{
+return await new Promise((resolvePromise, reject) =>
+⋮----
+async function readBlob(oid: string): Promise<string>
+⋮----
+function stripABPrefix(path?: string): string | undefined
+⋮----
+function detectLayer(p: string | undefined): Layer
+⋮----
+function extractSymbolsAndExports(content: string):
+⋮----
+/export\s*\{\s*([^}]+)\s*\}/, // named exports list
+⋮----
+async function loadContent(file: FileDiff): Promise<
+⋮----
+if (beforeOid) { try { result.before = await readBlob(beforeOid); } catch { /* ignore */ } }
+if (afterOid) { try { result.after = await readBlob(afterOid); } catch { /* ignore */ } }
+⋮----
+class TsPreEnrichCommand extends Command {
+⋮----
+async execute(): Promise<number>
+⋮----
+} catch {/* ignore */}
+</file>
+
+<file path="sharptools/git-diff-analyzer/src/server/repomix-service.ts">
+import { runCli, type CliOptions } from 'repomix';
+import path from 'path';
+import { promises as fs } from 'fs';
+⋮----
+export class RepomixService {
+⋮----
+private readonly maxOutputSize = 50000; // 50,000 characters
+private readonly maxDiffSize = 50000; // 50,000 characters
+⋮----
+/**
+   * Check if git diff is too large
+   */
+isDiffTooLarge(diffText: string): boolean
+⋮----
+/**
+   * Truncate git diff to maximum size if needed
+   */
+truncateDiffIfNeeded(diffText: string): string
+⋮----
+/**
+   * Generate repomix output for the current codebase
+   */
+async generateRepomixOutput(workingDirectory: string): Promise<
+⋮----
+// Create temporary output file
+⋮----
+include: '**/*.py,**/*.ts', // Only include Python and TypeScript files
+⋮----
+// Read the generated output
+⋮----
+// Clean up temporary file
+⋮----
+// Ignore cleanup errors
+⋮----
+// Check if output is within size limit
+⋮----
+/**
+   * Get size limits for display purposes
+   */
+getSizeLimits()
+</file>
+
+<file path="sharptools/generate-mermaid-diagram.ts">
+/**
+ * Generate Mermaid Diagram via Anthropic → .mermaid + .svg
+ *
+ * - Accepts a natural language prompt (arg, --prompt, or STDIN)
+ * - Calls Anthropic to synthesize a Mermaid diagram
+ * - Writes a .mermaid file using yyMMdd[a-z]_slug.mermaid naming
+ * - Renders an SVG via Mermaid CLI (mmdc)
+ *
+ * Requires ANTHROPIC_API_KEY in .env.local (at CWD or repo root).
+ *
+ * See also:
+ * - docs/reference/DIAGRAMS_MERMAID_GENERATION_REFERENCE.md — conventions, naming, and rendering commands
+ * - sharptools/markdown-to-html.ts — render Markdown with inline Mermaid blocks to HTML
+ */
+⋮----
+import { Cli, Command, Option } from 'clipanion';
+import Anthropic from '@anthropic-ai/sdk';
+import { config as dotenvConfig } from 'dotenv';
+import { mkdir, readdir, writeFile } from 'fs/promises';
+import { existsSync } from 'fs';
+import { basename, extname, resolve } from 'path';
+import { spawn } from 'child_process';
+⋮----
+async function readAllFromStdin(): Promise<string>
+⋮----
+function toSlug(input: string, maxWords = 8, maxLen = 64): string
+⋮----
+function yymmdd(date = new Date()): string
+⋮----
+async function nextSequentialPrefix(targetDir: string, prefixDate = yymmdd()): Promise<string>
+⋮----
+function ensureLeadingMermaid(diagram: string): string
+⋮----
+// If the model returned a fenced block, extract it
+⋮----
+async function run(command: string, args: string[], opts: { cwd?: string; verbose?: boolean } = {}): Promise<{ code: number }>
+{
+return await new Promise((resolvePromise, reject) =>
+⋮----
+class GenerateMermaidDiagram extends Command {
+⋮----
+async execute(): Promise<number>
+⋮----
+// Load env
+⋮----
+'--yes', // forwarded to npx
+⋮----
+// Using npx to invoke mmdc non-interactively
+⋮----
+// Try again ensuring the package is installed in the ephemeral context
+⋮----
+await run(opener, [svgPath], { verbose: false }).catch(() => {/* ignore */});
+⋮----
+private async getPromptText(): Promise<string>
+</file>
+
+<file path="sharptools/markdown-to-html.ts">
+/**
+ * Markdown → HTML CLI with Mermaid support (root script)
+ *
+ * - Parses Markdown using markdown-it
+ * - Syntax highlights code blocks with highlight.js
+ * - Supports Mermaid via client-side rendering (CDN script)
+ * - Reads from --input file or STDIN; writes to --output or STDOUT
+ *
+ * See also:
+ * - docs/reference/DIAGRAMS_MERMAID_GENERATION_REFERENCE.md — conventions and workflow for Mermaid diagrams
+ */
+⋮----
+import { Cli, Command, Option } from 'clipanion';
+import MarkdownIt from 'markdown-it';
+import hljs from 'highlight.js';
+import { readFile, writeFile } from 'fs/promises';
+import { basename, extname, resolve } from 'path';
+⋮----
+function escapeHtml(input: string): string
+⋮----
+async function readAllFromStdin(): Promise<string>
+⋮----
+type MermaidMode = 'client' | 'none';
+⋮----
+class MarkdownToHtmlCommand extends Command {
+⋮----
+async execute(): Promise<number>
+⋮----
+private renderMarkdownToHtml(markdown: string, mermaidMode: MermaidMode): string
+⋮----
+} catch {/* ignore */}
+⋮----
+private wrapInHtmlDocument(bodyHtml: string, title: string, hlTheme: string, mermaidMode: MermaidMode): string
+</file>
+
+<file path="tests/basic-diff.commit.e8f3a986.test.ts">
+import { spawn } from 'child_process';
+import { readFile } from 'fs/promises';
+import { resolve } from 'path';
+⋮----
+function runCapture(command: string, args: string[], options: { cwd?: string } = {}): Promise<{ code: number; stdout: string; stderr: string }>
+{
+return new Promise((resolvePromise, reject) =>
+⋮----
+function runCaptureWithInput(command: string, args: string[], input: string, options: { cwd?: string } = {}): Promise<{ code: number; stdout: string; stderr: string }>
+{
+return new Promise((resolvePromise, reject) =>
+⋮----
+type LineOp = 'context' | 'add' | 'del';
+interface HunkLine { id: string; op: LineOp; text: string; noNewlineAtEndOfFile?: boolean }
+interface Hunk { rawHeader?: string; oldStart: number; oldLines: number; newStart: number; newLines: number; lines: HunkLine[] }
+interface BasicDiffFile { rawPatch?: string; hunks: Hunk[] }
+interface BasicDiff { files: BasicDiffFile[] }
+⋮----
+async function generateBasicDiffJsonFromRaw(rawText: string): Promise<BasicDiff>
+⋮----
+async function readCanonicalRawDiff(): Promise<string>
+⋮----
+type HunkToken = { type: 'header'; header: string } | { type: 'line'; op: LineOp; text: string; noNewline?: boolean };
+⋮----
+function tokenizeRawDiffHunks(raw: string): HunkToken[]
+⋮----
+function tokenizeBasicHunks(basic: BasicDiff): HunkToken[]
+⋮----
+async function getGitRawDiffForCommit(commit: string): Promise<string>
+⋮----
+// Use the same commit expansion as the CLI: parent..commit (or empty-tree..commit for roots)
+// Ask git for the raw diff text with no ANSI/color.
+// We do not specify -U to let Git use its default context, aligning with the CLI default.
+⋮----
+// Ensure trailing newline
+⋮----
+async function main()
+⋮----
+// Read canonical raw diff (fixture)
+⋮----
+// Fallback to live git diff if the fixture is missing
+⋮----
+// Generate BasicDiff JSON by piping the raw diff into the CLI (stdin)
+⋮----
+// Tolerate trailing empty context tokens produced by parser on blank lines after hunks
+⋮----
+// Compare token streams 1:1; if different lengths, locate first mismatch before failing
+⋮----
+// Execute and surface non-zero exit for CI-like usage
+</file>
+
+<file path="sharptools/git-diff-html.ts">
+import { Cli, Command, Option } from 'clipanion';
+import hljs from 'highlight.js';
+import { writeFile } from 'fs/promises';
+import { spawn } from 'child_process';
+import { resolve, basename, extname } from 'path';
+⋮----
+type ColorMode = 'auto' | 'always' | 'never';
+⋮----
+function escapeHtml(input: string): string
+⋮----
+async function readAllFromStdin(): Promise<string>
+⋮----
+function stripAnsi(input: string): string
+⋮----
+async function runCapture(command: string, args: string[], options: { cwd?: string } = {}): Promise<{ code: number; stdout: string; stderr: string }>
+{
+return await new Promise((resolvePromise, reject) =>
+⋮----
+async function getFirstParent(commit: string): Promise<string | null>
+⋮----
+class GitDiffHtmlCommand extends Command {
+⋮----
+// Diff selection options (parity with sharptools/git-diff.ts)
+⋮----
+// HTML output options
+⋮----
+async execute(): Promise<number>
+⋮----
+runCapture(opener, [outputPath]).catch(() => {/* ignore */});
+⋮----
+private async getDiffText(): Promise<string>
+⋮----
+// Prefer STDIN when piped
+⋮----
+// Force no color to avoid ANSI in HTML; highlight.js handles styling
+⋮----
+private renderDiffHtml(diff: string): string
+⋮----
+// Use highlight.js to render as "diff"
+⋮----
+private wrapInHtmlDocument(bodyHtml: string, title: string, hlTheme: string): string
+⋮----
+function inferTitle(outputPath?: string): string | null
+</file>
+
+<file path="sharptools/diff/basic-diff.ts">
+/**
+ * Basic Diff Generator (Clipanion CLI)
+ *
+ * - Runs `git diff` (or reads from STDIN) and parses the unified diff
+ * - Produces a deterministic BasicDiff JSON structure suitable for rich rendering
+ * - IDs are stable and URL-safe (short base64url of SHA-1)
+ */
+⋮----
+import { Cli, Command, Option } from 'clipanion';
+import { spawn } from 'child_process';
+import { writeFile, readFile } from 'fs/promises';
+import { basename, extname, resolve } from 'path';
+import { createHash } from 'crypto';
+⋮----
+// ------------------------------
+// Utilities
+// ------------------------------
+⋮----
+function nowIso(): string
+⋮----
+function stableHash(input: string): string
+⋮----
+function stripAnsi(input: string): string
+⋮----
+async function runCapture(command: string, args: string[], options: { cwd?: string } = {}): Promise<{ code: number; stdout: string; stderr: string }>
+{
+return await new Promise((resolvePromise, reject) =>
+⋮----
+async function readAllFromStdin(): Promise<string>
+⋮----
+// The constant object id of the empty tree in Git
+⋮----
+async function getFirstParent(commit: string): Promise<string | null>
+⋮----
+// stdout is: <commit> [<parent1> <parent2> ...]
+⋮----
+function languageFromPath(path?: string): string | undefined
+⋮----
+function inferStatus(context: {
+  sawRenameFrom: boolean;
+  sawCopyFrom: boolean;
+  oldPath?: string;
+  newPath?: string;
+}): FileStatus
+⋮----
+// ------------------------------
+// Unified Diff Parser (minimal but robust)
+// ------------------------------
+⋮----
+interface ParseOptions {
+  fileIdSeed?: string;
+}
+⋮----
+export function parseUnifiedDiff(diffText: string, options: ParseOptions = {}): { files: FileDiff[]; totals: { filesChanged: number; additions: number; deletions: number; hunks: number; binaryFilesChanged: number }; warnings: string[] }
+{
+  const lines = diffText.replace(/\r\n/g, '\n').split('\n');
+⋮----
+function finalizeCurrent()
+⋮----
+// Start of a new file diff block
+⋮----
+// Skip prelude lines (e.g., Git version headers)
+⋮----
+// File metadata lines
+⋮----
+// example: index abc123..def456 100644
+⋮----
+// Hunk header
+⋮----
+// Parse hunk lines until next hunk or file boundary
+⋮----
+// let outer loop handle these
+⋮----
+// Preserve raw patch content for this file
+⋮----
+// Handle "\\ No newline at end of file"
+⋮----
+// Unexpected line in hunk – treat as context to avoid parser abort
+⋮----
+// End-of-file chunk handling: just advance
+⋮----
+// Totals
+⋮----
+function stripABPrefix(path: string | undefined): string | undefined
+⋮----
+async function readBlob(oid: string): Promise<string>
+⋮----
+async function readFileAtRef(ref: string, relPath: string): Promise<string>
+⋮----
+async function readFromWorkingTree(relPath: string): Promise<string>
+⋮----
+function sliceContextLines(content: string | undefined, startLine: number, numLines: number, radius: number): string[] | undefined
+⋮----
+async function enrichHunksWithContext(files: FileDiff[], radius: number, refs:
+⋮----
+// ignore and fall through
+⋮----
+try { beforeContent = await readFileAtRef(refs.baseRef, oldRel); } catch { /* ignore */ }
+⋮----
+try { afterContent = await readFileAtRef(refs.headRef, newRel); } catch { /* ignore */ }
+⋮----
+try { afterContent = await readFromWorkingTree(newRel); } catch { /* ignore */ }
+⋮----
+// ------------------------------
+// CLI
+// ------------------------------
+⋮----
+class BasicDiffCommand extends Command {
+⋮----
+// Diff selection options (parity with other CLIs)
+⋮----
+// Output options
+⋮----
+async execute(): Promise<number>
+⋮----
+// Empty STDIN despite non-TTY; fall back to invoking git directly
+⋮----
+// Prefer explicit selection (commits/refA/refB/staged) over piped detection
+⋮----
+private buildGitArgs(): string[]
+⋮----
+// Color handling
+⋮----
+// If a single commit (no range operator) was provided, expand to parent..commit for display purposes
+⋮----
+private async computeGitInvocation(): Promise<
+⋮----
+// Color handling
+⋮----
+// Single commit provided via --commits
+⋮----
+// Root commit – diff against empty tree
+⋮----
+private async getDiffText(): Promise<string>
+⋮----
+// Backward-compatible method; prefer computeGitInvocation in execute()
+</file>
+
+<file path="sharptools/diff/rich-diff-llm.ts">
+/**
+ * Rich Diff Generator (LLM-backed: Pass A/B/C via Anthropic)
+ *
+ * - Reads BasicDiff JSON and optional TS enrichment bundle
+ * - Pass A: Per-hunk item extraction using prompts/templates/pass_a_item_extraction.md.njk
+ * - Pass B: Global clustering and summary using prompts/templates/pass_b_clustering.md.njk
+ * - Pass C: Per-cluster Mermaid synthesis using prompts/templates/pass_c_diagram.md.njk
+ * - Produces a RichDiff JSON document
+ *
+ * Fallback: If ANTHROPIC_API_KEY is missing or any call fails, generate a heuristic stub
+ *           similar to sharptools/diff/rich-diff.ts so the pipeline still completes.
+ */
+⋮----
+import { Cli, Command, Option } from 'clipanion';
+import { readFile, writeFile } from 'fs/promises';
+import { resolve, join } from 'path';
+import { config as dotenvConfig } from 'dotenv';
+import nunjucks from 'nunjucks';
+import { getModel as getChatModel } from '../config';
+import type { BasicDiff, RichDiff, RichItem, Cluster, Callout, EvidenceRef } from '../claude-conversation-exporter/types/diff-schemas';
+⋮----
+// Lazy import Anthropic to allow running without the package if not used
+⋮----
+interface EnrichmentBundle {
+  createdAtIso?: string;
+  files?: Record<string, {
+    fileId: string;
+    layer?: 'frontend' | 'backend' | 'tests' | 'docs' | 'unknown';
+    symbols?: string[];
+    exports?: string[];
+    churn?: { additions: number; deletions: number; hunks: number };
+  }>;
+  hunks?: Record<string, {
+    fileId: string;
+    hunkId: string;
+    symbolsNearChange?: string[];
+  }>;
+}
+⋮----
+function nowIso(): string
+⋮----
+function ensureArray<T>(val: any): T[]
+⋮----
+function firstTextFromAnthropic(resp: any): string
+⋮----
+function extractFirstJsonCandidate(text: string): string | null
+⋮----
+// Remove common fences if present
+⋮----
+// Fast path
+try { JSON.parse(candidate); return candidate; } catch {/* continue */}
+// Attempt to find the first balanced JSON object region
+⋮----
+try { JSON.parse(slice); return slice; } catch {/* keep shrinking */}
+⋮----
+async function readJsonFile<T>(path: string): Promise<T>
+⋮----
+function toEvidenceForFile(fileId: string): EvidenceRef
+⋮----
+function configureNunjucks(templatesDir: string): nunjucks.Environment
+⋮----
+async function callAnthropicJSON(apiKey: string, model: string, system: string, prompt: string, maxTokens = 4000): Promise<any>
+⋮----
+// dynamic import to keep startup fast
+⋮----
+function makeItemId(fileId: string, hunkId: string | undefined, index: number): string
+⋮----
+function parseExtensionsList(input: string | undefined): Set<string> | null
+⋮----
+function heuristicFallback(basic: BasicDiff): RichDiff
+⋮----
+class RichDiffLlmCommand extends Command {
+⋮----
+async execute(): Promise<number>
+⋮----
+// Ensure env
+⋮----
+// Resolve friendly alias → concrete API model; fall back to input if unknown
+⋮----
+} catch {/* ignore, keep raw */}
+⋮----
+// Pass A: per-hunk item extraction
+⋮----
+// Soft-fail per hunk and continue
+⋮----
+// Pass B: clustering and summary
+⋮----
+// Proceed with empty clusters and a simple summary
+⋮----
+// Pass C: per-cluster Mermaid
+⋮----
+// Attempt heuristic fallback
+</file>
+
+<file path="sharptools/git-diff-analyzer/src/server/git-monitor.ts">
+import { spawn } from 'child_process';
+⋮----
+import chokidar from 'chokidar';
+import { EventEmitter } from 'events';
+import { GitMonitorConfig, GitDiffData } from '../shared/types';
+import { RepomixService } from './repomix-service';
+⋮----
+export class GitMonitor extends EventEmitter {
+⋮----
+constructor(config: GitMonitorConfig)
+⋮----
+async start(): Promise<void>
+⋮----
+// Always set up polling as fallback
+⋮----
+async stop(): Promise<void>
+⋮----
+async manualRefresh(): Promise<void>
+⋮----
+private async startStaticFileMode(): Promise<void>
+⋮----
+// Read the static file once and emit it
+⋮----
+private async startFolderWatchMode(): Promise<void>
+⋮----
+// Resolve relative paths relative to the current working directory
+⋮----
+// Set up file system watcher
+⋮----
+// Get initial diff
+⋮----
+private startPolling(): void
+⋮----
+private async checkForChanges(): Promise<void>
+⋮----
+private async getCurrentGitDiff(): Promise<GitDiffData>
+⋮----
+// Truncate diff if it's too large instead of rejecting it
+⋮----
+// Try to generate repomix output
+⋮----
+private countFiles(diffText: string): number
+⋮----
+private countAdditions(diffText: string): number
+⋮----
+private countDeletions(diffText: string): number
+⋮----
+private hashString(str: string): string
+⋮----
+hash = hash & hash; // Convert to 32bit integer
+</file>
+
+<file path="sharptools/git-diff-analyzer/src/server/index.ts">
+import http from 'http';
+import { promises as fs } from 'fs';
+import path from 'path';
+import url from 'url';
+import { WebSocketServer, WebSocket } from 'ws';
+import { GitMonitor } from './git-monitor';
+import { LLMProcessor } from './llm-processor';
+import { AppConfig, WebSocketMessage, GitDiffData, AnalysisResult } from '../shared/types';
+⋮----
+class GitDiffAnalyzerServer
+⋮----
+constructor(config: AppConfig)
+⋮----
+private setupWebSocket(): void
+⋮----
+// Send current state to new client
+⋮----
+private setupGitMonitor(): void
+⋮----
+// Handle normal diff changes
+⋮----
+// Process with LLM
+⋮----
+// Send LLM processing error to clients
+⋮----
+private async handleWebSocketMessage(ws: WebSocket, message: any): Promise<void>
+⋮----
+private sendToClient(ws: WebSocket, message: WebSocketMessage): void
+⋮----
+private broadcast(message: WebSocketMessage): void
+⋮----
+private async handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void>
+⋮----
+// API endpoints
+⋮----
+// Serve static files
+⋮----
+private async serveStatic(res: http.ServerResponse, pathname: string): Promise<void>
+⋮----
+// Remove leading slash and join with client directory
+⋮----
+// Security check - ensure file is within client directory
+⋮----
+private getContentType(filePath: string): string
+⋮----
+private sendJson(res: http.ServerResponse, status: number, obj: unknown): void
+⋮----
+async start(): Promise<void>
+⋮----
+async stop(): Promise<void>
+⋮----
+// Load configuration and start server
+async function main()
+⋮----
+// Graceful shutdown
+</file>
+
+<file path="sharptools/git-diff-analyzer/src/server/llm-processor.ts">
+import { promises as fs } from 'fs';
+import path from 'path';
+import OpenAI from 'openai';
+import { AnalysisResult, GitDiffData, LLMConfig } from '../shared/types';
+import { TemplateProcessor, TemplateContext } from './template-processor';
+⋮----
+export class LLMProcessor
+⋮----
+constructor(config: LLMConfig)
+⋮----
+// Initialize template processor if templates folder is configured
+⋮----
+private initializeOpenAI(): void
+⋮----
+async processGitDiff(diffData: GitDiffData): Promise<AnalysisResult[]>
+⋮----
+// Process each prompt type
+⋮----
+// For the first prompt failure, throw the error to trigger server error handling
+⋮----
+// Add fallback analysis for other prompt types
+⋮----
+// Process template-based analyses if template processor is available
+⋮----
+// Don't fail the entire process for template errors, just log them
+⋮----
+// If all prompts failed, throw an error to trigger server error handling
+⋮----
+// Re-throw the error so the server can handle it and send llm-error message
+⋮----
+private async processPrompt(promptType: string, diffData: GitDiffData, timestamp: Date): Promise<AnalysisResult>
+⋮----
+// Replace git diff placeholder
+⋮----
+// Add repomix output if available
+⋮----
+// Parse JSON response
+⋮----
+confidence: 0.9, // High confidence for LLM responses
+⋮----
+private async loadPromptTemplate(promptType: string): Promise<string>
+⋮----
+// Check cache first
+⋮----
+// Cache the template
+⋮----
+private getTitleForType(promptType: string): string
+⋮----
+/**
+   * Process template-based analyses using .njk files
+   */
+private async processTemplateAnalyses(diffData: GitDiffData, timestamp: Date): Promise<AnalysisResult[]>
+⋮----
+// Pass A: Item Extraction
+⋮----
+// Extract items from Pass A for Pass B
+⋮----
+// Pass B: Clustering (only if we have items from Pass A)
+⋮----
+// Extract clusters from Pass B for Pass C
+⋮----
+// Pass C: Diagram Synthesis (for each cluster)
+⋮----
+// Return empty array to not break the main flow
+⋮----
+/**
+   * Process a single template pass
+   */
+private async processTemplatePass(
+    templateName: string, 
+    diffData: GitDiffData, 
+    timestamp: Date, 
+    items?: any[], 
+    cluster?: any
+): Promise<AnalysisResult>
+⋮----
+// Create appropriate context based on template type
+⋮----
+// For Pass A, we'll process the diff in chunks/hunks
+// For now, we'll create a simplified context
+⋮----
+// Parse JSON response
+⋮----
+confidence: 0.9, // High confidence for LLM responses
+⋮----
+private generateFallbackAnalysis(promptType: string, diffData: GitDiffData, timestamp: Date): AnalysisResult
+⋮----
+private generateFakeAnalysis(diffData: GitDiffData): AnalysisResult[]
+⋮----
+// Code Summary Analysis
+⋮----
+// Impact Analysis
+⋮----
+// Security Review
+⋮----
+securityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+⋮----
+// Performance Analysis
+</file>
+
+<file path="sharptools/git-diff-analyzer/src/shared/types.ts">
+export interface GitMonitorConfig {
+  mode: 'static-file' | 'folder-watch';
+  staticFilePath?: string;
+  watchFolder?: string;
+  pollInterval?: number;
+}
+⋮----
+export interface ServerConfig {
+  port: number;
+  host: string;
+}
+⋮----
+export interface LLMConfig {
+  enabled: boolean;
+  promptsFolder: string;
+  templatesFolder?: string;
+  model?: string;
+  temperature?: number;
+  maxCompletionTokens?: number;
+}
+⋮----
+export interface UIConfig {
+  showRawDiff: boolean;
+  refreshInterval: number;
+}
+⋮----
+export interface AppConfig {
+  server: ServerConfig;
+  gitMonitor: GitMonitorConfig;
+  llm: LLMConfig;
+  ui: UIConfig;
+}
+⋮----
+export interface AnalysisResult {
+  id: string;
+  type: string;
+  title: string;
+  content: any;
+  confidence: number;
+  timestamp: Date;
+  promptUsed?: string;
+}
+⋮----
+export interface GitDiffData {
+  diffText: string;
+  timestamp: Date;
+  fileCount: number;
+  additions: number;
+  deletions: number;
+  repomixOutput?: string;
+  repomixSize?: number;
+}
+⋮----
+export interface WebSocketMessage {
+  type: 'diff-update' | 'analysis-update' | 'status-update' | 'llm-error' | 'diff-too-large';
+  data: any;
+}
+</file>
+
+<file path="sharptools/chat-server.ts">
+import http from 'http'
+import { promises as fs } from 'fs'
+import path from 'path'
+import url from 'url'
+import { getThemeMode, getPort, getModel, getAvailableModels, getDefaultModelId } from './config'
+⋮----
+// Load env from .env.local if present
+⋮----
+function parseArgs(argv: string[])
+⋮----
+function log(...parts: any[])
+⋮----
+function contentTypeFor(filePath: string): string
+⋮----
+function sendJson(res: http.ServerResponse, status: number, obj: unknown)
+⋮----
+async function handleChat(req: http.IncomingMessage, res: http.ServerResponse)
+⋮----
+async function serveStatic(res: http.ServerResponse, filePath: string)
+⋮----
+function safeJoin(baseDir: string, requestedPath: string): string | null
+⋮----
+} catch { /* continue */ }
+</file>
+
+<file path="sharptools/config.ts">
+export type ThemeMode = 'light' | 'dark' | 'auto'
+⋮----
+export function getThemeMode(): ThemeMode
+⋮----
+export function getPort(): number
+⋮----
+// Chat model configuration
+export type Provider = 'anthropic'
+⋮----
+export type ChatModelId = 'claude-sonnet-4' | 'claude-opus-4.1'
+⋮----
+export interface ChatModelInfo {
+  id: ChatModelId
+  label: string
+  provider: Provider
+  apiModel: string
+}
+⋮----
+// Closest current Anthropic model identifier
+⋮----
+// Closest current Anthropic model identifier
+⋮----
+export function getAvailableModels(): ChatModelInfo[]
+⋮----
+function normalizeModelId(input: string | undefined | null): ChatModelId | null
+⋮----
+// Accept ids or friendly aliases
+⋮----
+export function getDefaultModelId(): ChatModelId
+⋮----
+// Primary entry: resolve a model from an argument or environment, falling back to default
+export function getModel(modelArg?: string): ChatModelInfo
+</file>
+
+<file path="sharptools/git-diff.ts">
+/**
+ * Git Diff CLI (Clipanion)
+ *
+ * Prints a Git diff:
+ * - Default: changes since last commit (working tree vs HEAD)
+ * - Optional: diff between two commits (or refs) via `--commits <a>..<b>` or positional args
+ *
+ * Examples:
+ *   git-diff                 # show unstaged+staged vs HEAD
+ *   git-diff --staged        # show only staged changes vs HEAD
+ *   git-diff --cached        # alias of --staged
+ *   git-diff --commits abc123..def456
+ *   git-diff abc123 def456
+ *   git-diff --name-only
+ *   git-diff --color=always
+ */
+⋮----
+import { Cli, Command, Option } from 'clipanion';
+import { spawn } from 'child_process';
+⋮----
+type ColorMode = 'auto' | 'always' | 'never';
+⋮----
+async function run(command: string, args: string[], options: { cwd?: string; inherit?: boolean } = {}): Promise<{ code: number }>
+{
+return await new Promise((resolvePromise, reject) =>
+⋮----
+async function getFirstParent(commit: string): Promise<string | null>
+⋮----
+class GitDiffCommand extends Command {
+⋮----
+// Either provide a single "a..b" via --commits, or two positional refs
+⋮----
+async execute(): Promise<number>
+⋮----
+// Color handling
+⋮----
+// Default working tree vs HEAD (no extra args)
+</file>
+
+<file path="sharptools/diff/rich-diff-html.ts">
+/**
+ * Rich Diff → HTML Renderer (LLM-aware)
+ *
+ * Renders a RichDiff JSON into a standalone HTML document including:
+ * - Summary headline, narrative, totals
+ * - Key callouts (importance/risk/confidence)
+ * - Items table with expandable details (why, operations, entities, evidence)
+ * - Cluster cards with heuristics, member items, and Mermaid diagrams
+ */
+⋮----
+import { Cli, Command, Option } from 'clipanion';
+import { readFile, writeFile } from 'fs/promises';
+import { resolve } from 'path';
+⋮----
+interface EvidenceRef { fileId: string; hunkId?: string; lineIds?: string[] }
+interface Operation { op: string; details?: string }
+interface Entities { symbols?: string[]; exports?: string[]; routes?: Array<{ method: string; path: string }>; tables?: string[]; filesTouched?: string[]; configKeys?: string[] }
+interface Highlight { tag: string; note?: string }
+interface RichDiffMeta { createdAtIso: string; model?: { provider: string; name: string } }
+interface RichItem {
+  id: string;
+  fileId: string;
+  hunkId?: string;
+  kind: string;
+  headline: string;
+  whatChanged: string;
+  whyChanged?: string;
+  operations?: Operation[];
+  entities?: Entities;
+  highlights?: Highlight[];
+  importance: number;
+  risk: number;
+  confidence: number;
+  evidence?: EvidenceRef[];
+}
+interface Cluster { id: string; title: string; kind: string; description: string; importance: number; risk: number; confidence: number; heuristics: string[]; members: Array<{ itemId: string }>; mermaid?: string }
+interface Callout { id: string; title: string; whyItMatters: string; importance: number; risk: number; confidence: number; references: EvidenceRef[] }
+interface RichDiffDoc { meta: RichDiffMeta; summary: { headline: string; narrative: string; keyCallouts?: Callout[]; totals: { filesChanged: number; additions: number; deletions: number; clusters: number } }; clusters?: Cluster[]; items: RichItem[] }
+⋮----
+function escapeHtml(input: string): string
+⋮----
+class RichDiffHtmlCommand extends Command {
+⋮----
+async execute(): Promise<number>
+⋮----
+private render(doc: RichDiffDoc): string
+</file>
+
+<file path="sharptools/diff/pipeline.ts">
+/**
+ * Diff Pipeline (timestamped)
+ *
+ * Runs the full diff pipeline and writes timestamped artifacts:
+ *   yyMMdd_HHmmss_basic-diff.json
+ *   yyMMdd_HHmmss_enrichment.json
+ *   yyMMdd_HHmmss_rich-diff.json
+ *   yyMMdd_HHmmss_rich-diff.html
+ *
+ * Flags allow skipping persistence of intermediates (default emit all).
+ */
+⋮----
+import { Cli, Command, Option } from 'clipanion';
+import { spawn } from 'child_process';
+import { resolve, basename } from 'path';
+import { rm } from 'fs/promises';
+⋮----
+type ColorMode = 'auto' | 'always' | 'never';
+⋮----
+function dtStamp(): string
+⋮----
+async function runCapture(command: string, args: string[]): Promise<{ code: number; stdout: string; stderr: string }>
+{
+return await new Promise((resolvePromise, reject) =>
+⋮----
+class DiffPipelineCommand extends Command {
+⋮----
+// Diff selection options
+⋮----
+// Output control
+⋮----
+// LLM controls (only used when --use-llm)
+⋮----
+async execute(): Promise<number>
+⋮----
+// 1) Basic diff
+⋮----
+// 2) Enrichment
+⋮----
+// 3) Rich diff (LLM or heuristic)
+⋮----
+// 4) HTML
+⋮----
+// Optionally clean up intermediates
+⋮----
+try { await rm(p, { force: true }); } catch {/* ignore */}
+⋮----
+runCapture(opener, [htmlPath]).catch(() => {/* ignore */});
+</file>
+
+</files>

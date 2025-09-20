@@ -10,7 +10,10 @@
     "build": "echo 'No build step needed for v1'"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.1",
+    "@types/nunjucks": "^3.2.6",
     "chokidar": "^3.5.3",
+    "nunjucks": "^3.2.4",
     "openai": "^4.68.4",
     "repomix": "^1.5.0",
     "ws": "^8.14.2"

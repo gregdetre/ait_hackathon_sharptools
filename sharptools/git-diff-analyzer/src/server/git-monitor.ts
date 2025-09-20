@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import chokidar from 'chokidar';
 import { EventEmitter } from 'events';
-import { GitMonitorConfig, GitDiffData } from '../shared/types';
+import { GitMonitorConfig, GitDiffData, RepomixConfig } from '../shared/types';
 import { RepomixService } from './repomix-service';
 
 export class GitMonitor extends EventEmitter {
@@ -12,10 +12,14 @@ export class GitMonitor extends EventEmitter {
   private pollTimer?: NodeJS.Timeout;
   private lastDiffHash: string = '';
   private repomixService: RepomixService;
+  private repomixConfig: RepomixConfig;
+  private isProcessing: boolean = false;
+  private consecutiveNoChanges: number = 0;
 
-  constructor(config: GitMonitorConfig) {
+  constructor(config: GitMonitorConfig, repomixConfig: RepomixConfig) {
     super();
     this.config = config;
+    this.repomixConfig = repomixConfig;
     this.repomixService = new RepomixService();
   }
 
@@ -47,6 +51,14 @@ export class GitMonitor extends EventEmitter {
   async manualRefresh(): Promise<void> {
     console.log('Manual refresh triggered');
     await this.checkForChanges();
+  }
+
+  /**
+   * Notify that LLM processing has completed
+   */
+  notifyLLMProcessingComplete(): void {
+    console.log('✅ LLM processing completed, resuming git monitoring');
+    this.isProcessing = false;
   }
 
   private async startStaticFileMode(): Promise<void> {
@@ -114,18 +126,95 @@ export class GitMonitor extends EventEmitter {
   }
 
   private async checkForChanges(): Promise<void> {
+    // Prevent multiple simultaneous checks
+    if (this.isProcessing) {
+      console.log('⏳ Skipping git check - already processing');
+      return;
+    }
+
     try {
+      this.isProcessing = true;
+      
+      // First, do a quick check to see if there are any changes at all
+      const hasChanges = await this.hasGitChanges();
+      
+      if (!hasChanges) {
+        // No changes at all - skip processing
+        this.consecutiveNoChanges++;
+        console.log(`📋 No git changes detected (quick check) - consecutive: ${this.consecutiveNoChanges}`);
+        
+        // If we've had many consecutive no-changes, we can reduce polling frequency
+        if (this.consecutiveNoChanges > 10) {
+          console.log('🐌 Reducing polling frequency due to inactivity');
+          this.consecutiveNoChanges = 0; // Reset counter
+          // Could implement adaptive polling here if needed
+        }
+        return;
+      }
+      
+      // Reset consecutive no-changes counter
+      this.consecutiveNoChanges = 0;
+      
+      // There are changes, now get the full diff
       const diffData = await this.getCurrentGitDiff();
       const diffHash = this.hashString(diffData.diffText);
       
       if (diffHash !== this.lastDiffHash) {
+        console.log(`🔄 Git diff changed (${diffData.fileCount} files, +${diffData.additions} -${diffData.deletions})`);
         this.lastDiffHash = diffHash;
         this.emit('diff-changed', diffData);
+      } else {
+        console.log('📋 Git diff unchanged (same content)');
       }
     } catch (error) {
       console.error('Error checking for git changes:', error);
       this.emit('error', error);
+    } finally {
+      this.isProcessing = false;
     }
+  }
+
+  /**
+   * Quick check to see if there are any git changes without generating the full diff
+   */
+  private async hasGitChanges(): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const cwd = this.config.mode === 'folder-watch' 
+        ? path.resolve(this.config.watchFolder)
+        : process.cwd();
+
+      // Use git status --porcelain for a quick check
+      const gitProcess = spawn('git', ['status', '--porcelain'], { 
+        cwd,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      gitProcess.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      gitProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      gitProcess.on('close', (code) => {
+        if (code !== 0 && stderr) {
+          reject(new Error(`Git status failed: ${stderr}`));
+          return;
+        }
+
+        // If there's any output, there are changes
+        const hasChanges = stdout.trim().length > 0;
+        resolve(hasChanges);
+      });
+
+      gitProcess.on('error', (error) => {
+        reject(error);
+      });
+    });
   }
 
   private async getCurrentGitDiff(): Promise<GitDiffData> {
@@ -156,43 +245,34 @@ export class GitMonitor extends EventEmitter {
           return;
         }
 
-        // Check if diff is too large
-        if (this.repomixService.isDiffTooLarge(stdout)) {
-          console.log(`⚠️ Git diff too large (${stdout.length} characters), rejecting`);
-          const diffData: GitDiffData = {
-            diffText: stdout,
-            timestamp: new Date(),
-            fileCount: this.countFiles(stdout),
-            additions: this.countAdditions(stdout),
-            deletions: this.countDeletions(stdout)
-          };
-          // Emit a special event for large diffs
-          this.emit('diff-too-large', diffData);
-          resolve(diffData);
-          return;
-        }
-
-        // Try to generate repomix output
+        // Truncate diff if it's too large instead of rejecting it
+        const truncatedDiff = this.repomixService.truncateDiffIfNeeded(stdout);
+        
+        // Try to generate repomix output if enabled
         let repomixOutput: string | undefined;
         let repomixSize: number | undefined;
         
-        try {
-          const repomixResult = await this.repomixService.generateRepomixOutput(cwd);
-          if (repomixResult) {
-            repomixOutput = repomixResult.output;
-            repomixSize = repomixResult.size;
-            console.log(`✅ Repomix output included (${repomixSize} characters)`);
+        if (this.repomixConfig.enabled) {
+          try {
+            const repomixResult = await this.repomixService.generateRepomixOutput(cwd);
+            if (repomixResult) {
+              repomixOutput = repomixResult.output;
+              repomixSize = repomixResult.size;
+              console.log(`✅ Repomix output included (${repomixSize} characters)`);
+            }
+          } catch (error) {
+            console.error('Failed to generate repomix output:', error);
           }
-        } catch (error) {
-          console.error('Failed to generate repomix output:', error);
+        } else {
+          console.log('📦 Repomix disabled in configuration');
         }
 
         const diffData: GitDiffData = {
-          diffText: stdout,
+          diffText: truncatedDiff,
           timestamp: new Date(),
-          fileCount: this.countFiles(stdout),
-          additions: this.countAdditions(stdout),
-          deletions: this.countDeletions(stdout),
+          fileCount: this.countFiles(truncatedDiff),
+          additions: this.countAdditions(truncatedDiff),
+          deletions: this.countDeletions(truncatedDiff),
           repomixOutput,
           repomixSize
         };
@@ -222,6 +302,16 @@ export class GitMonitor extends EventEmitter {
   }
 
   private hashString(str: string): string {
+    // For large strings, sample every nth character to improve performance
+    if (str.length > 10000) {
+      const sampleRate = Math.max(1, Math.floor(str.length / 1000));
+      let sampledStr = '';
+      for (let i = 0; i < str.length; i += sampleRate) {
+        sampledStr += str[i];
+      }
+      str = sampledStr;
+    }
+    
     let hash = 0;
     if (str.length === 0) return hash.toString();
     

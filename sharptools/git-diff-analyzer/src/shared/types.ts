@@ -12,7 +12,9 @@ export interface ServerConfig {
 
 export interface LLMConfig {
   enabled: boolean;
+  provider: 'openai' | 'claude';
   promptsFolder: string;
+  templatesFolder?: string;
   model?: string;
   temperature?: number;
   maxCompletionTokens?: number;
@@ -23,10 +25,15 @@ export interface UIConfig {
   refreshInterval: number;
 }
 
+export interface RepomixConfig {
+  enabled: boolean;
+}
+
 export interface AppConfig {
   server: ServerConfig;
   gitMonitor: GitMonitorConfig;
   llm: LLMConfig;
+  repomix: RepomixConfig;
   ui: UIConfig;
 }
 
@@ -37,6 +44,7 @@ export interface AnalysisResult {
   content: any;
   confidence: number;
   timestamp: Date;
+  promptUsed?: string;
 }
 
 export interface GitDiffData {

@@ -5,7 +5,7 @@
   },
   "gitMonitor": {
     "mode": "folder-watch",
-    "watchFolder": "/workspaces/wrapper/ait_hackathon_sharptools",
+    "watchFolder": "../../",
     "staticFilePath": null,
     "pollInterval": 2000
   },

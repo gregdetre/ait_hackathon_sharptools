@@ -2,7 +2,7 @@ import http from 'http'
 import { promises as fs } from 'fs'
 import path from 'path'
 import url from 'url'
-import { getThemeMode } from './config'
+import { getThemeMode, getPort } from './config'
 
 // Load env from .env.local if present
 try {
@@ -27,7 +27,7 @@ function parseArgs(argv: string[]) {
 
 const args = parseArgs(process.argv)
 const HOST = (args.host as string) || process.env.HOST || '127.0.0.1'
-const PORT = Number(args.port || process.env.PORT || 8787)
+const PORT = Number(args.port || getPort())
 const STATIC_DIR = (args.dir as string) || process.env.STATIC_DIR || path.resolve(__dirname, '../docs/chat')
 const DISABLE_CACHE = (args['no-cache'] as boolean) ?? true
 const QUIET = (args.quiet as boolean) || false
@@ -133,7 +133,7 @@ const server = http.createServer(async (req, res) => {
   log(`${method} ${pathname}`)
 
   if (method === 'GET' && pathname === '/config') {
-    return void sendJson(res, 200, { themeMode: getThemeMode() })
+    return void sendJson(res, 200, { themeMode: getThemeMode(), port: PORT })
   }
 
   if (method === 'POST' && pathname === '/chat') return void (await handleChat(req, res))

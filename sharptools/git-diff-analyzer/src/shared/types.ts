@@ -45,9 +45,11 @@ export interface GitDiffData {
   fileCount: number;
   additions: number;
   deletions: number;
+  repomixOutput?: string;
+  repomixSize?: number;
 }
 
 export interface WebSocketMessage {
-  type: 'diff-update' | 'analysis-update' | 'status-update';
+  type: 'diff-update' | 'analysis-update' | 'status-update' | 'llm-error' | 'diff-too-large';
   data: any;
 }

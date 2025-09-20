@@ -326,6 +326,12 @@
                                 setError(`LLM Processing Error: ${message.data.error}`);
                                 setErrorType('llm-error');
                                 break;
+                            
+                            case 'diff-too-large':
+                                console.log('🚨 Setting diff too large error:', message.data.error);
+                                setError(`Git Diff Too Large: ${message.data.error}\n\nDiff size: ${message.data.diffSize.toLocaleString()} characters (max: ${message.data.maxSize.toLocaleString()})\nFiles: ${message.data.fileCount}, +${message.data.additions} -${message.data.deletions}`);
+                                setErrorType('general');
+                                break;
                         }
                     } catch (err) {
                         console.error('Error parsing WebSocket message:', err);

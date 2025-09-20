@@ -91,8 +91,17 @@ export class LLMProcessor {
 
   private async processPrompt(promptType: string, diffData: GitDiffData, timestamp: Date): Promise<AnalysisResult> {
     console.log(`📝 Processing prompt: ${promptType}`);
-    const promptTemplate = await this.loadPromptTemplate(promptType);
-    const prompt = promptTemplate.replace('{GIT_DIFF}', diffData.diffText);
+    let promptTemplate = await this.loadPromptTemplate(promptType);
+    
+    // Replace git diff placeholder
+    let prompt = promptTemplate.replace('{GIT_DIFF}', diffData.diffText);
+    
+    // Add repomix output if available
+    if (diffData.repomixOutput && diffData.repomixSize) {
+      console.log(`📦 Including repomix output (${diffData.repomixSize} characters)`);
+      prompt = prompt.replace('{GIT_DIFF}', `${diffData.diffText}\n\n## Codebase Context (Repomix Output)\n\n\`\`\`xml\n${diffData.repomixOutput}\n\`\`\``);
+    }
+    
     console.log(`📏 Prompt length: ${prompt.length} characters`);
 
     try {

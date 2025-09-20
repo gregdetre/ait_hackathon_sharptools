@@ -70,6 +70,7 @@ class GitDiffAnalyzerServer {
   }
 
   private setupGitMonitor(): void {
+    // Handle normal diff changes
     this.gitMonitor.on('diff-changed', async (diffData: GitDiffData) => {
       console.log(`Git diff changed: ${diffData.fileCount} files, +${diffData.additions} -${diffData.deletions}`);
       
@@ -101,6 +102,23 @@ class GitDiffAnalyzerServer {
         });
         console.log('✅ LLM error broadcast sent');
       }
+    });
+
+    // Handle large diffs
+    this.gitMonitor.on('diff-too-large', (diffData: GitDiffData) => {
+      console.log('🚨 Git diff too large, rejecting analysis');
+      this.broadcast({
+        type: 'diff-too-large',
+        data: {
+          error: 'Git diff is too large for analysis',
+          diffSize: diffData.diffText.length,
+          maxSize: 50000,
+          timestamp: new Date(),
+          fileCount: diffData.fileCount,
+          additions: diffData.additions,
+          deletions: diffData.deletions
+        }
+      });
     });
 
     this.gitMonitor.on('error', (error) => {

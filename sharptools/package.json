@@ -1,0 +1,21 @@
+{
+    "name": "sharptools-scripts",
+    "private": true,
+    "license": "MIT",
+    "description": "Project root scripts for documentation and tooling",
+    "scripts": {
+        "chat": "tsx chat-server.ts --host=127.0.0.1 --port=8787",
+        "git:diff": "tsx git-diff.ts"
+    },
+    "dependencies": {
+        "clipanion": "^3.2.1",
+        "highlight.js": "^11.9.0",
+        "markdown-it": "^14.1.0",
+        "openai": "^4.68.4",
+        "dotenv": "^16.4.5"
+    },
+    "devDependencies": {
+        "tsx": "^4.0.0",
+        "typescript": "^5.0.0"
+    }
+}

@@ -1,0 +1,138 @@
+classDiagram
+direction LR
+
+class BasicDiff {
+  meta: Meta
+  totals: Totals
+  files: FileDiff[]
+}
+
+class Totals {
+  filesChanged: number
+  additions: number
+  deletions: number
+  hunks: number
+  binaryFilesChanged: number
+}
+
+class FileDiff {
+  id: string
+  pathOld: string
+  pathNew: string
+  status: string
+  isBinary: boolean
+  stats: FileStats
+  hunks: Hunk[]
+  rawPatch: string optional
+  beforeBlobId: string optional
+  afterBlobId: string optional
+}
+
+class FileStats {
+  additions: number
+  deletions: number
+  hunks: number
+}
+
+class Hunk {
+  id: string
+  oldStart: number
+  oldLines: number
+  newStart: number
+  newLines: number
+  sectionHeading: string optional
+  contentHash: string
+  lines: Line[]
+  intraLine: WordSpans optional
+}
+
+class Line {
+  id: string
+  op: string
+  text: string
+  oldNumber: number optional
+  newNumber: number optional
+}
+
+class RichDiff {
+  meta: Meta
+  summary: Summary
+  clusters: Cluster[]
+  items: Item[]
+  relations: Relation[] optional
+  views: Views optional
+  trace: Trace optional
+}
+
+class Summary {
+  headline: string
+  narrative: string
+  keyCallouts: string[]
+  totals: SummaryTotals
+}
+
+class SummaryTotals {
+  filesChanged: number
+  additions: number
+  deletions: number
+  clusters: number
+}
+
+class Cluster {
+  id: string
+  title: string
+  description: string optional
+  kind: string
+  itemIds: string[]
+  diagram: string optional
+}
+
+class Item {
+  id: string
+  fileId: string
+  hunkId: string optional
+  kind: string
+  headline: string
+  whatChanged: string
+  importance: number
+  risk: number
+  confidence: number
+  evidence: EvidenceRef[]
+}
+
+class EvidenceRef {
+  fileId: string
+  hunkId: string optional
+  lineIds: string[] optional
+}
+
+class Relation {
+  fromItemId: string
+  toItemId: string
+  type: string
+}
+
+class Views
+class Trace
+class Meta
+class WordSpans
+
+BasicDiff *-- "files 0..*" FileDiff
+FileDiff *-- "hunks 0..*" Hunk
+Hunk *-- "lines 1..*" Line
+
+RichDiff o-- "summary 1" Summary
+RichDiff o-- "clusters 0..*" Cluster
+RichDiff o-- "items 0..*" Item
+RichDiff o-- "relations 0..*" Relation
+RichDiff o-- "views 0..1" Views
+RichDiff o-- "trace 0..1" Trace
+
+Item ..> FileDiff : references fileId
+Item ..> Hunk : references hunkId
+EvidenceRef ..> Line : references lineIds
+
+%% Regenerate SVG
+%% npx mmdc -i docs/diagrams/250920b_diff_data_structures_class_diagram.mermaid -o docs/diagrams/250920b_diff_data_structures_class_diagram.svg -w 1400 -H 1600 -s 2 -b transparent -t default
+
+

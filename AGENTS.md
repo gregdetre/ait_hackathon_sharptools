@@ -12,6 +12,9 @@ Sharp Tools helps programmers use AI-assisted tools (like Claude Code and Cursor
 
 **Atomic commit rule**: Always chain `git reset && git add ... && git commit` in a single command to ensure only this agent's work is committed, as per `docs/instructions/GIT_COMMIT_CHANGES.md`.
 
+When pulling, use `git pull --rebase`.
+
+
 ```bash
 # Install dependencies (root)
 npm install

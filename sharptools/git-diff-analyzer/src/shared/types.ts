@@ -13,6 +13,9 @@ export interface ServerConfig {
 export interface LLMConfig {
   enabled: boolean;
   promptsFolder: string;
+  model?: string;
+  temperature?: number;
+  maxCompletionTokens?: number;
 }
 
 export interface UIConfig {

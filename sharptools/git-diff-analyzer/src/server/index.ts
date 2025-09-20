@@ -22,7 +22,7 @@ class GitDiffAnalyzerServer {
     this.server = http.createServer(this.handleHttpRequest.bind(this));
     this.wss = new WebSocketServer({ server: this.server });
     this.gitMonitor = new GitMonitor(config.gitMonitor);
-    this.llmProcessor = new LLMProcessor(config.llm.enabled, config.llm.promptsFolder);
+    this.llmProcessor = new LLMProcessor(config.llm);
 
     this.setupWebSocket();
     this.setupGitMonitor();
@@ -78,17 +78,28 @@ class GitDiffAnalyzerServer {
         type: 'diff-update',
         data: diffData
       });
-
+ 
       // Process with LLM
       try {
         const analyses = await this.llmProcessor.processGitDiff(diffData);
         this.currentAnalyses = analyses;
-        this.broadcast({
+        this.broadcast({ 
           type: 'analysis-update',
           data: analyses
         });
       } catch (error) {
         console.error('Error processing diff with LLM:', error);
+        // Send LLM processing error to clients
+        console.log('🚨 Broadcasting LLM error to clients:', error.message);
+        this.broadcast({
+          type: 'llm-error',
+          data: { 
+            error: error.message,
+            timestamp: new Date(),
+            diffFileCount: diffData.fileCount
+          }
+        });
+        console.log('✅ LLM error broadcast sent');
       }
     });
 

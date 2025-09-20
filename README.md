@@ -7,8 +7,9 @@ A Node.js CLI tool built with Clipanion that exports Claude Code conversations t
 - 🔍 **Discover Sessions**: Automatically finds Claude Code session files from your projects
 - 📊 **Multiple Export Modes**: Export user prompts, assistant outputs, or full conversations
 - 📁 **Project Support**: Export conversations from any project directory
+- 🌍 **Export All Projects**: Export all conversations from all projects at once with `--all`
 - 📋 **List Sessions**: View all available Claude sessions across your system
-- 🎯 **Flexible Output**: Export to custom output directories
+- 🎯 **Flexible Output**: Export to custom output directories with organized structure
 
 ## Installation
 
@@ -49,6 +50,7 @@ npm start -- [options]
 | `--mode` | `-m` | Export mode: `prompts`, `outputs`, or `full` | `full` |
 | `--verbose` | `-v` | Enable verbose logging | `false` |
 | `--list` | `-l` | List available sessions without exporting | `false` |
+| `--all` | `-a` | Export conversations from all projects | `false` |
 | `--help` | | Show help information | |
 
 ### Examples
@@ -68,6 +70,12 @@ npm run dev -- --output ./my-exports
 
 # List all available sessions
 npm run dev -- --list
+
+# Export all projects at once
+npm run dev -- --all
+
+# Export all projects with only prompts
+npm run dev -- --all --mode prompts
 
 # Enable verbose logging
 npm run dev -- --verbose
@@ -99,8 +107,9 @@ The tool exports conversations as JSON files with the following structure:
 }
 ```
 
-Additionally, an `export-summary.json` file is created with metadata about the export:
+Additionally, an `export-summary.json` file is created with metadata about the export.
 
+For single project exports:
 ```json
 {
   "exportedAt": "ISO 8601 date",
@@ -110,6 +119,38 @@ Additionally, an `export-summary.json` file is created with metadata about the e
   "totalMessages": 100,
   "files": ["session1.json", "session2.json"]
 }
+```
+
+For all projects export (`--all` flag):
+```json
+{
+  "exportedAt": "ISO 8601 date",
+  "exportMode": "full",
+  "totalProjects": 10,
+  "totalSessions": 50,
+  "totalMessages": 1000,
+  "projects": [
+    {
+      "projectName": "project-name",
+      "projectPath": "/full/path/to/project",
+      "sessionsExported": 5,
+      "messagesExported": 100,
+      "files": ["project-name/session1.json", "project-name/session2.json"]
+    }
+  ]
+}
+```
+
+When using `--all`, conversations are organized in subdirectories by project:
+```
+claude-exports/
+├── project1-name/
+│   ├── session1.json
+│   └── session2.json
+├── project2-name/
+│   ├── session1.json
+│   └── session2.json
+└── export-summary.json
 ```
 
 ## Requirements

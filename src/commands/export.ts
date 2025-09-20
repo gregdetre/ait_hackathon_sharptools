@@ -17,9 +17,11 @@ export class ExportCommand extends Command {
     `,
     examples: [
       ['Export current project conversations', '$0'],
+      ['Export all projects', '$0 --all'],
       ['Export specific project', '$0 --project /path/to/project'],
       ['Export to custom output directory', '$0 --output ./my-exports'],
       ['Export only user prompts', '$0 --mode prompts'],
+      ['Export all projects with only prompts', '$0 --all --mode prompts'],
       ['Export with verbose logging', '$0 --verbose']
     ]
   });
@@ -44,18 +46,27 @@ export class ExportCommand extends Command {
     description: 'List available sessions without exporting'
   });
 
+  all = Option.Boolean('-a,--all', false, {
+    description: 'Export conversations from all projects'
+  });
+
   async execute() {
     try {
       // Resolve paths
-      const projectPath = path.resolve(this.project);
       const outputDir = path.resolve(this.output);
 
-      if (!fs.existsSync(projectPath)) {
-        throw new Error(`Project path does not exist: ${projectPath}`);
-      }
-
       console.log(`🔍 Claude Conversation Exporter\n`);
-      console.log(`📁 Project: ${projectPath}`);
+
+      // Check if exporting all projects
+      if (this.all) {
+        console.log(`📁 Mode: Export all projects`);
+      } else {
+        const projectPath = path.resolve(this.project);
+        if (!fs.existsSync(projectPath)) {
+          throw new Error(`Project path does not exist: ${projectPath}`);
+        }
+        console.log(`📁 Project: ${projectPath}`);
+      }
 
       // Validate mode
       const validModes = ['prompts', 'outputs', 'full'];
@@ -97,6 +108,95 @@ export class ExportCommand extends Command {
         return 0;
       }
 
+      // Export all projects mode
+      if (this.all) {
+        const allProjectSessions = finder.listAllSessions();
+
+        if (allProjectSessions.size === 0) {
+          console.log('\n❌ No Claude sessions found.');
+          return 0;
+        }
+
+        console.log(`📊 Found ${allProjectSessions.size} project(s) with sessions\n`);
+
+        // Create output directory
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+        }
+
+        const parser = new SessionParser(exportMode, this.verbose);
+        let totalProjects = 0;
+        let totalSessions = 0;
+        let totalMessages = 0;
+        const projectSummaries: any[] = [];
+
+        for (const [projectDir] of allProjectSessions) {
+          const projectName = path.basename(projectDir);
+          console.log(`\n📂 Processing: ${projectName}`);
+
+          // Create project subdirectory
+          const projectOutputDir = path.join(outputDir, projectName);
+          if (!fs.existsSync(projectOutputDir)) {
+            fs.mkdirSync(projectOutputDir, { recursive: true });
+          }
+
+          // Parse sessions for this project
+          const sessions = parser.parseDirectory(projectDir);
+
+          if (sessions.length === 0) {
+            console.log(`  ⚠️  No valid sessions to export`);
+            continue;
+          }
+
+          let projectMessages = 0;
+          const projectFiles: string[] = [];
+
+          for (const session of sessions) {
+            const outputFile = path.join(projectOutputDir, `${session.sessionId}.json`);
+            fs.writeFileSync(outputFile, JSON.stringify(session, null, 2));
+            projectFiles.push(`${projectName}/${session.sessionId}.json`);
+            projectMessages += session.messages.length;
+          }
+
+          totalProjects++;
+          totalSessions += sessions.length;
+          totalMessages += projectMessages;
+
+          projectSummaries.push({
+            projectName,
+            projectPath: projectDir,
+            sessionsExported: sessions.length,
+            messagesExported: projectMessages,
+            files: projectFiles
+          });
+
+          console.log(`  ✓ Exported ${sessions.length} session(s), ${projectMessages} message(s)`);
+        }
+
+        // Create global summary file
+        const summaryFile = path.join(outputDir, 'export-summary.json');
+        const summary = {
+          exportedAt: new Date().toISOString(),
+          exportMode: this.mode,
+          totalProjects,
+          totalSessions,
+          totalMessages,
+          projects: projectSummaries
+        };
+
+        fs.writeFileSync(summaryFile, JSON.stringify(summary, null, 2));
+
+        console.log(`\n✅ Export complete!`);
+        console.log(`   Projects: ${totalProjects}`);
+        console.log(`   Sessions: ${totalSessions}`);
+        console.log(`   Messages: ${totalMessages}`);
+        console.log(`   Output: ${outputDir}`);
+
+        return 0;
+      }
+
+      // Single project export (existing logic)
+      const projectPath = path.resolve(this.project);
       const sessionDir = finder.findSessionDirectory(projectPath);
       console.log(`📂 Session directory: ${sessionDir}`);
 

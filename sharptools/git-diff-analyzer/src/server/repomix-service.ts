@@ -14,6 +14,18 @@ export class RepomixService {
   }
 
   /**
+   * Truncate git diff to maximum size if needed
+   */
+  truncateDiffIfNeeded(diffText: string): string {
+    if (diffText.length <= this.maxDiffSize) {
+      return diffText;
+    }
+    
+    console.log(`⚠️ Git diff too large (${diffText.length} characters), truncating to ${this.maxDiffSize} characters`);
+    return diffText.substring(0, this.maxDiffSize);
+  }
+
+  /**
    * Generate repomix output for the current codebase
    */
   async generateRepomixOutput(workingDirectory: string): Promise<{ output: string; size: number } | null> {

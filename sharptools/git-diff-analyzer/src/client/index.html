@@ -270,6 +270,64 @@
             content: "⚠️ ";
             font-size: 1.2em;
         }
+
+        .placeholder-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #e1e8ed;
+            opacity: 0.7;
+        }
+
+        .placeholder-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .placeholder-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #6c757d;
+        }
+
+        .loading-badge {
+            background: #fff3cd;
+            color: #856404;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .loading-badge .spinner {
+            width: 12px;
+            height: 12px;
+            border-width: 1px;
+            margin-right: 0;
+        }
+
+        .placeholder-content {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -282,6 +340,7 @@
         function useGitDiffStream() {
             const [diffData, setDiffData] = useState(null);
             const [analyses, setAnalyses] = useState([]);
+            const [pendingAnalyses, setPendingAnalyses] = useState([]);
             const [connectionStatus, setConnectionStatus] = useState('connecting');
             const [error, setError] = useState(null);
             const [errorType, setErrorType] = useState(null);
@@ -309,9 +368,43 @@
                         switch (message.type) {
                             case 'diff-update':
                                 setDiffData(message.data);
+                                // Clear previous analyses and set up pending analyses when new diff is detected
+                                setAnalyses([]);
+                                setError(null);
+                                setErrorType(null);
+                                
+                                // Set up pending analyses for all expected analysis types
+                                const expectedAnalyses = [
+                                    { id: 'd3-force-diagram', title: 'D3.js Force Diagram - Class Visualization', status: 'Processing class data...' },
+                                    { id: 'code-summary', title: 'Code Summary', status: 'Waiting for Claude response...' }
+                                ];
+                                setPendingAnalyses(expectedAnalyses);
                                 break;
                             case 'analysis-update':
-                                setAnalyses(message.data);
+                                // Handle both single analysis and array of analyses
+                                if (Array.isArray(message.data)) {
+                                    if (message.data.length === 1) {
+                                        // Single analysis - append to existing analyses and remove from pending
+                                        const completedAnalysis = message.data[0];
+                                        setAnalyses(prev => {
+                                            const existing = prev.filter(a => a.id !== completedAnalysis.id);
+                                            return [...existing, completedAnalysis];
+                                        });
+                                        setPendingAnalyses(prev => prev.filter(p => p.id !== completedAnalysis.id));
+                                    } else {
+                                        // Multiple analyses - replace all
+                                        setAnalyses(message.data);
+                                        setPendingAnalyses([]);
+                                    }
+                                } else {
+                                    // Single analysis object - append to existing analyses and remove from pending
+                                    const completedAnalysis = message.data;
+                                    setAnalyses(prev => {
+                                        const existing = prev.filter(a => a.id !== completedAnalysis.id);
+                                        return [...existing, completedAnalysis];
+                                    });
+                                    setPendingAnalyses(prev => prev.filter(p => p.id !== completedAnalysis.id));
+                                }
                                 break;
                             case 'status-update':
                                 if (message.data.error) {
@@ -362,32 +455,212 @@
                 }
             }, [ws]);
 
-            return { diffData, analyses, connectionStatus, error, errorType, refresh };
+            return { diffData, analyses, pendingAnalyses, connectionStatus, error, errorType, refresh };
+        }
+
+        // Placeholder Panel Component
+        function PlaceholderPanel({ pendingAnalysis }) {
+            return (
+                <div className="placeholder-panel">
+                    <div className="placeholder-header">
+                        <h3 className="placeholder-title">{pendingAnalysis.title}</h3>
+                        <div className="loading-badge">
+                            <div className="spinner"></div>
+                            Processing...
+                        </div>
+                    </div>
+                    <div className="placeholder-content">
+                        <div className="status-indicator">
+                            <div className="spinner"></div>
+                            {pendingAnalysis.status}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // D3 Force Diagram Component
+        function D3ForceDiagram({ data, containerId, onNodeClick }) {
+            useEffect(() => {
+                const container = document.getElementById(containerId);
+                if (!container || !data) return;
+
+                // Load D3.js if not already loaded
+                if (typeof d3 === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = 'https://d3js.org/d3.v7.min.js';
+                    script.onload = () => renderD3Diagram();
+                    document.head.appendChild(script);
+                } else {
+                    renderD3Diagram();
+                }
+
+                function renderD3Diagram() {
+                    try {
+                        console.log('D3 data:', data);
+                        
+                        if (!data || !data.nodes || !data.links) {
+                            container.innerHTML = '<div style="padding: 1rem; text-align: center; color: #dc3545;">Invalid D3 data structure</div>';
+                            return;
+                        }
+
+                        // Clear container
+                        container.innerHTML = '';
+                        
+                        // Set up SVG
+                        const width = container.offsetWidth;
+                        const height = 400;
+                        
+                        const svg = d3.select(container)
+                            .append('svg')
+                            .attr('width', width)
+                            .attr('height', height);
+                            
+                        // Add zoom behavior
+                        const zoom = d3.zoom()
+                            .scaleExtent([0.1, 4])
+                            .on('zoom', (event) => {
+                                g.attr('transform', event.transform);
+                            });
+                            
+                        svg.call(zoom);
+                        
+                        const g = svg.append('g');
+                        
+                        // Create force simulation
+                        const simulation = d3.forceSimulation(data.nodes)
+                            .force('link', d3.forceLink(data.links).id(d => d.id).distance(100))
+                            .force('charge', d3.forceManyBody().strength(-300))
+                            .force('center', d3.forceCenter(width / 2, height / 2))
+                            .force('collision', d3.forceCollide().radius(20));
+                        
+                        // Create links
+                        const link = g.append('g')
+                            .selectAll('line')
+                            .data(data.links)
+                            .enter().append('line')
+                            .attr('stroke', '#999')
+                            .attr('stroke-opacity', 0.6)
+                            .attr('stroke-width', 2);
+                        
+                        // Create nodes
+                        const node = g.append('g')
+                            .selectAll('circle')
+                            .data(data.nodes)
+                            .enter().append('circle')
+                            .attr('r', d => Math.max(8, Math.min(25, d.size || 15)))
+                            .attr('fill', d => d.color || '#ffffff')
+                            .attr('stroke', '#333')
+                            .attr('stroke-width', 2)
+                            .style('cursor', 'pointer')
+                            .call(d3.drag()
+                                .on('start', dragstarted)
+                                .on('drag', dragged)
+                                .on('end', dragended))
+                            .on('click', (event, d) => {
+                                event.stopPropagation();
+                                console.log('Node clicked:', d);
+                                if (onNodeClick) {
+                                    onNodeClick(d);
+                                }
+                            });
+                        
+                        // Add labels
+                        const label = g.append('g')
+                            .selectAll('text')
+                            .data(data.nodes)
+                            .enter().append('text')
+                            .text(d => d.name || d.id)
+                            .attr('font-size', '12px')
+                            .attr('font-family', 'Arial, sans-serif')
+                            .attr('text-anchor', 'middle')
+                            .attr('dy', '0.35em')
+                            .attr('fill', '#333')
+                            .style('pointer-events', 'none'); // Prevent text from blocking clicks
+                        
+                        // Add tooltips
+                        node.append('title')
+                            .text(d => `${d.name || d.id}\nStatus: ${d.status || 'unknown'}\nSize: ${d.size || 15}\nClick to view diff`);
+                        
+                        // Update positions on simulation tick
+                        simulation.on('tick', () => {
+                            link
+                                .attr('x1', d => d.source.x)
+                                .attr('y1', d => d.source.y)
+                                .attr('x2', d => d.target.x)
+                                .attr('y2', d => d.target.y);
+                            
+                            node
+                                .attr('cx', d => d.x)
+                                .attr('cy', d => d.y);
+                            
+                            label
+                                .attr('x', d => d.x)
+                                .attr('y', d => d.y);
+                        });
+                        
+                        // Drag functions
+                        function dragstarted(event, d) {
+                            if (!event.active) simulation.alphaTarget(0.3).restart();
+                            d.fx = d.x;
+                            d.fy = d.y;
+                        }
+                        
+                        function dragged(event, d) {
+                            d.fx = event.x;
+                            d.fy = event.y;
+                        }
+                        
+                        function dragended(event, d) {
+                            if (!event.active) simulation.alphaTarget(0);
+                            d.fx = null;
+                            d.fy = null;
+                        }
+                        
+                    } catch (error) {
+                        console.error('D3 rendering error:', error);
+                        container.innerHTML = '<div style="padding: 1rem; text-align: center; color: #dc3545;">Error rendering D3 diagram: ' + error.message + '</div>';
+                    }
+                }
+            }, [data, containerId, onNodeClick]);
+
+            return null; // This component only renders via useEffect
         }
 
         // Analysis Panel Component
         function AnalysisPanel({ analysis }) {
             const renderContent = () => {
+                // Add safety checks for analysis and content
+                if (!analysis || !analysis.content) {
+                    return (
+                        <div className="panel-content">
+                            <p style={{ color: '#6c757d', fontStyle: 'italic' }}>
+                                Analysis data not available
+                            </p>
+                        </div>
+                    );
+                }
+
                 switch (analysis.type) {
                     case 'code-summary':
                         return (
                             <div className="panel-content">
                                 <div className="metric">
                                     <span className="metric-label">Files Changed:</span>
-                                    <span className="metric-value">{analysis.content.filesChanged}</span>
+                                    <span className="metric-value">{analysis.content.filesChanged || 0}</span>
                                 </div>
                                 <div className="metric">
                                     <span className="metric-label">Lines Added:</span>
-                                    <span className="metric-value">+{analysis.content.linesAdded}</span>
+                                    <span className="metric-value">+{analysis.content.linesAdded || 0}</span>
                                 </div>
                                 <div className="metric">
                                     <span className="metric-label">Lines Deleted:</span>
-                                    <span className="metric-value">-{analysis.content.linesDeleted}</span>
+                                    <span className="metric-value">-{analysis.content.linesDeleted || 0}</span>
                                 </div>
                                 <p style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                                    {analysis.content.summary}
+                                    {analysis.content.summary || 'No summary available'}
                                 </p>
-                                {analysis.content.keyChanges.length > 0 && (
+                                {analysis.content.keyChanges && analysis.content.keyChanges.length > 0 && (
                                     <div className="tag-list">
                                         {analysis.content.keyChanges.map((change, idx) => (
                                             <span key={idx} className="tag">{change}</span>
@@ -397,13 +670,46 @@
                             </div>
                         );
 
+                    case 'd3-force-diagram':
+                        return (
+                            <div className="panel-content">
+                                <div id={`d3-container-${analysis.id}`} style={{ 
+                                    width: '100%', 
+                                    height: '400px', 
+                                    border: '1px solid #e1e8ed', 
+                                    borderRadius: '6px',
+                                    background: '#f8f9fa'
+                                }}>
+                                    <div style={{ 
+                                        padding: '1rem', 
+                                        textAlign: 'center', 
+                                        color: '#6c757d',
+                                        fontSize: '0.9rem'
+                                    }}>
+                                        Loading D3.js visualization...
+                                    </div>
+                                </div>
+                                <D3ForceDiagram 
+                                    data={analysis.content} 
+                                    containerId={`d3-container-${analysis.id}`}
+                                    onNodeClick={(node) => {
+                                        console.log('Node clicked in D3:', node);
+                                        // Store the selected node for diff display
+                                        window.selectedClassNode = node;
+                                        // Trigger a re-render by updating a global state
+                                        window.dispatchEvent(new CustomEvent('classNodeSelected', { detail: node }));
+                                    }}
+                                />
+                            </div>
+                        );
+
                     case 'impact-analysis':
                         return (
                             <div className="panel-content">
                                 <div className="metric">
                                     <span className="metric-label">Risk Level:</span>
-                                    <span className={`tag risk-${analysis.content.riskLevel}`}>
-                                        {analysis.content.riskLevel.toUpperCase()}
+                                    <span className={`tag risk-${analysis.content.riskLevel || 'unknown'}`}>
+                                        {(analysis.content.riskLevel || 'unknown').toUpperCase()}
                                     </span>
                                 </div>
                                 <div className="metric" style={{ marginTop: '0.5rem' }}>
@@ -412,7 +718,7 @@
                                         {analysis.content.breakingChanges ? 'Yes' : 'No'}
                                     </span>
                                 </div>
-                                {analysis.content.affectedComponents.length > 0 && (
+                                {analysis.content.affectedComponents && analysis.content.affectedComponents.length > 0 && (
                                     <div>
                                         <p style={{ fontWeight: '500', marginTop: '1rem', marginBottom: '0.5rem' }}>
                                             Affected Components:
@@ -432,20 +738,20 @@
                             <div className="panel-content">
                                 <div className="metric">
                                     <span className="metric-label">Security Score:</span>
-                                    <span className="metric-value">{analysis.content.securityScore}/100</span>
+                                    <span className="metric-value">{analysis.content.securityScore || 0}/100</span>
                                 </div>
                                 <div className="metric">
                                     <span className="metric-label">Issues Found:</span>
-                                    <span className="metric-value">{analysis.content.issues.length}</span>
+                                    <span className="metric-value">{analysis.content.issues ? analysis.content.issues.length : 0}</span>
                                 </div>
-                                {analysis.content.issues.length > 0 && (
+                                {analysis.content.issues && analysis.content.issues.length > 0 && (
                                     <div style={{ marginTop: '1rem' }}>
                                         {analysis.content.issues.map((issue, idx) => (
                                             <div key={idx} style={{ marginBottom: '0.5rem' }}>
-                                                <span className={`tag risk-${issue.severity}`}>
-                                                    {issue.severity.toUpperCase()}
+                                                <span className={`tag risk-${issue.severity || 'unknown'}`}>
+                                                    {(issue.severity || 'unknown').toUpperCase()}
                                                 </span>
-                                                <span style={{ marginLeft: '0.5rem' }}>{issue.description}</span>
+                                                <span style={{ marginLeft: '0.5rem' }}>{issue.description || 'No description'}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -453,27 +759,170 @@
                             </div>
                         );
 
-                    case 'performance-analysis':
+                    case 'rich-diff-analysis':
                         return (
                             <div className="panel-content">
-                                <div className="metric">
-                                    <span className="metric-label">Impact:</span>
-                                    <span className="metric-value">{analysis.content.performanceImpact}</span>
-                                </div>
-                                <div className="metric">
-                                    <span className="metric-label">Estimated Change:</span>
-                                    <span className="metric-value">{analysis.content.estimatedImpact}</span>
-                                </div>
-                                {analysis.content.potentialBottlenecks.length > 0 && (
+                                {analysis.content.error ? (
+                                    <div style={{ color: '#dc3545', fontWeight: '500' }}>
+                                        Error: {analysis.content.message || 'Unknown error'}
+                                    </div>
+                                ) : (
                                     <div>
-                                        <p style={{ fontWeight: '500', marginTop: '1rem', marginBottom: '0.5rem' }}>
-                                            Potential Issues:
-                                        </p>
-                                        <div className="tag-list">
-                                            {analysis.content.potentialBottlenecks.map((bottleneck, idx) => (
-                                                <span key={idx} className="tag">{bottleneck}</span>
-                                            ))}
-                                        </div>
+                                        {/* Summary Section */}
+                                        {analysis.content.summary && (
+                                            <div style={{ marginBottom: '1.5rem' }}>
+                                                <h4 style={{ marginBottom: '0.5rem', color: '#2c3e50' }}>
+                                                    {analysis.content.summary.headline || 'Summary'}
+                                                </h4>
+                                                <p style={{ marginBottom: '1rem', color: '#555' }}>
+                                                    {analysis.content.summary.narrative || 'No narrative available'}
+                                                </p>
+                                                
+                                                {/* Totals */}
+                                                {analysis.content.summary.totals && (
+                                                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                                                        <div className="metric">
+                                                            <span className="metric-label">Files:</span>
+                                                            <span className="metric-value">{analysis.content.summary.totals.filesChanged || 0}</span>
+                                                        </div>
+                                                        <div className="metric">
+                                                            <span className="metric-label">Additions:</span>
+                                                            <span className="metric-value">+{analysis.content.summary.totals.additions || 0}</span>
+                                                        </div>
+                                                        <div className="metric">
+                                                            <span className="metric-label">Deletions:</span>
+                                                            <span className="metric-value">-{analysis.content.summary.totals.deletions || 0}</span>
+                                                        </div>
+                                                        <div className="metric">
+                                                            <span className="metric-label">Clusters:</span>
+                                                            <span className="metric-value">{analysis.content.summary.totals.clusters || 0}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Key Callouts */}
+                                                {analysis.content.summary.keyCallouts && analysis.content.summary.keyCallouts.length > 0 && (
+                                                    <div>
+                                                        <h5 style={{ marginBottom: '0.5rem', color: '#2c3e50' }}>Key Callouts:</h5>
+                                                        {analysis.content.summary.keyCallouts.map((callout, idx) => (
+                                                            <div key={idx} style={{ 
+                                                                background: '#f8f9fa', 
+                                                                padding: '0.75rem', 
+                                                                borderRadius: '6px', 
+                                                                marginBottom: '0.5rem',
+                                                                border: '1px solid #dee2e6'
+                                                            }}>
+                                                                <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
+                                                                    {callout.title}
+                                                                </div>
+                                                                <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>
+                                                                    {callout.whyItMatters}
+                                                                </div>
+                                                                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                                                                    <span className={`tag risk-${callout.risk <= 2 ? 'low' : callout.risk <= 3 ? 'medium' : 'high'}`}>
+                                                                        Risk: {callout.risk}/5
+                                                                    </span>
+                                                                    <span className="tag" style={{ background: '#e8f5e8', color: '#2d7d2d' }}>
+                                                                        Importance: {callout.importance}/5
+                                                                    </span>
+                                                                    <span className="tag" style={{ background: '#cce7ff', color: '#004085' }}>
+                                                                        Confidence: {Math.round((callout.confidence || 0) * 100)}%
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Clusters Section */}
+                                        {analysis.content.clusters && analysis.content.clusters.length > 0 && (
+                                            <div style={{ marginBottom: '1.5rem' }}>
+                                                <h4 style={{ marginBottom: '0.5rem', color: '#2c3e50' }}>Clusters:</h4>
+                                                {analysis.content.clusters.map((cluster, idx) => (
+                                                    <div key={idx} style={{ 
+                                                        background: '#f8f9fa', 
+                                                        padding: '0.75rem', 
+                                                        borderRadius: '6px', 
+                                                        marginBottom: '0.5rem',
+                                                        border: '1px solid #dee2e6'
+                                                    }}>
+                                                        <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
+                                                            {cluster.title}
+                                                        </div>
+                                                        <div style={{ color: '#6c757d', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                                                            {cluster.description}
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                            <span className={`tag risk-${cluster.risk <= 2 ? 'low' : cluster.risk <= 3 ? 'medium' : 'high'}`}>
+                                                                Risk: {cluster.risk}/5
+                                                            </span>
+                                                            <span className="tag" style={{ background: '#e8f5e8', color: '#2d7d2d' }}>
+                                                                Importance: {cluster.importance}/5
+                                                            </span>
+                                                            <span className="tag" style={{ background: '#cce7ff', color: '#004085' }}>
+                                                                Confidence: {Math.round((cluster.confidence || 0) * 100)}%
+                                                            </span>
+                                                        </div>
+                                                        {cluster.heuristics && cluster.heuristics.length > 0 && (
+                                                            <div>
+                                                                <div style={{ fontSize: '0.8rem', color: '#6c757d', marginBottom: '0.25rem' }}>
+                                                                    Heuristics:
+                                                                </div>
+                                                                <div className="tag-list">
+                                                                    {cluster.heuristics.map((heuristic, hIdx) => (
+                                                                        <span key={hIdx} className="tag" style={{ fontSize: '0.7rem' }}>
+                                                                            {heuristic}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Items Section */}
+                                        {analysis.content.items && analysis.content.items.length > 0 && (
+                                            <div>
+                                                <h4 style={{ marginBottom: '0.5rem', color: '#2c3e50' }}>Items ({analysis.content.items.length}):</h4>
+                                                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                                    {analysis.content.items.map((item, idx) => (
+                                                        <div key={idx} style={{ 
+                                                            background: '#f8f9fa', 
+                                                            padding: '0.5rem', 
+                                                            borderRadius: '4px', 
+                                                            marginBottom: '0.25rem',
+                                                            border: '1px solid #dee2e6',
+                                                            fontSize: '0.85rem'
+                                                        }}>
+                                                            <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
+                                                                {item.headline}
+                                                            </div>
+                                                            <div style={{ color: '#6c757d', marginBottom: '0.25rem' }}>
+                                                                {item.whatChanged}
+                                                            </div>
+                                                            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                                <span className={`tag risk-${item.risk <= 2 ? 'low' : item.risk <= 3 ? 'medium' : 'high'}`} style={{ fontSize: '0.7rem' }}>
+                                                                    Risk: {item.risk}/5
+                                                                </span>
+                                                                <span className="tag" style={{ background: '#e8f5e8', color: '#2d7d2d', fontSize: '0.7rem' }}>
+                                                                    Importance: {item.importance}/5
+                                                                </span>
+                                                                <span className="tag" style={{ background: '#cce7ff', color: '#004085', fontSize: '0.7rem' }}>
+                                                                    Confidence: {Math.round((item.confidence || 0) * 100)}%
+                                                                </span>
+                                                                <span className="tag" style={{ background: '#fff3cd', color: '#856404', fontSize: '0.7rem' }}>
+                                                                    {item.kind}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -482,7 +931,12 @@
                     default:
                         return (
                             <div className="panel-content">
-                                <pre>{JSON.stringify(analysis.content, null, 2)}</pre>
+                                <p style={{ fontWeight: '500', marginBottom: '1rem' }}>
+                                    {analysis.title || 'Unknown Analysis'}
+                                </p>
+                                <pre style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+                                    {JSON.stringify(analysis.content, null, 2)}
+                                </pre>
                             </div>
                         );
                 }
@@ -491,12 +945,195 @@
             return (
                 <div className="analysis-panel">
                     <div className="panel-header">
-                        <h3 className="panel-title">{analysis.title}</h3>
+                        <h3 className="panel-title">{analysis.title || 'Unknown Analysis'}</h3>
                         <span className="confidence-badge">
-                            {Math.round(analysis.confidence * 100)}%
+                            {Math.round((analysis.confidence || 0) * 100)}%
                         </span>
                     </div>
                     {renderContent()}
+                </div>
+            );
+        }
+
+        // Class Diff Panel Component
+        function ClassDiffPanel({ selectedNode, diffData }) {
+            const [isExpanded, setIsExpanded] = useState(false);
+
+            if (!selectedNode || !diffData || !diffData.diffText.trim()) {
+                return null;
+            }
+
+            // Extract the relevant diff for this specific class/file
+            const extractClassDiff = (diffText, node) => {
+                if (!node.file || node.file === 'unchanged') {
+                    return 'No diff available for unchanged classes';
+                }
+
+                console.log('=== DIFF EXTRACTION DEBUG ===');
+                console.log('Node:', node);
+                console.log('Node ID:', node.id);
+                console.log('Node name:', node.name);
+                console.log('Node file:', node.file);
+
+                // First, extract the file section from the diff
+                const fileSection = extractFileSection(diffText, node.file);
+                if (!fileSection) {
+                    return `No diff section found for file "${node.file}"`;
+                }
+
+                console.log('File section found, length:', fileSection.length);
+
+                // If this is a file node (not a class), return the entire file diff
+                if (node.id.startsWith('file:')) {
+                    return fileSection;
+                }
+
+                // For class nodes, extract only the class-specific changes
+                const classDiff = extractClassSpecificDiff(fileSection, node.name);
+                return classDiff || `No specific changes found for class "${node.name}" in file "${node.file}"`;
+            };
+
+            // Helper function to extract file section from diff
+            const extractFileSection = (diffText, filePath) => {
+                const allLines = diffText.split('\n');
+                let inFileSection = false;
+                let fileLines = [];
+                let currentFile = null;
+
+                for (let i = 0; i < allLines.length; i++) {
+                    const line = allLines[i];
+                    
+                    // Check for file header (diff --git format)
+                    if (line.startsWith('diff --git')) {
+                        // If we were in a file section, check if it's the one we want
+                        if (inFileSection && currentFile === filePath) {
+                            break; // Found the end of our target file
+                        }
+                        
+                        // Extract file paths from diff --git line
+                        const match = line.match(/diff --git a\/(.+) b\/(.+)/);
+                        if (match) {
+                            const oldPath = match[1];
+                            const newPath = match[2];
+                            if (oldPath === filePath || newPath === filePath) {
+                                inFileSection = true;
+                                currentFile = filePath;
+                                fileLines = [line]; // Start collecting lines
+                                continue;
+                            } else {
+                                inFileSection = false;
+                                currentFile = null;
+                                fileLines = [];
+                            }
+                        }
+                    }
+                    
+                    // If we're in the target file section, collect the line
+                    if (inFileSection && currentFile === filePath) {
+                        fileLines.push(line);
+                    }
+                }
+
+                return fileLines.length > 0 ? fileLines.join('\n') : null;
+            };
+
+            // Helper function to extract class-specific changes
+            const extractClassSpecificDiff = (fileSection, className) => {
+                const lines = fileSection.split('\n');
+                const relevantLines = [];
+                let inClassContext = false;
+                let braceCount = 0;
+                let classStartIndex = -1;
+
+                // Find class definition and extract its context
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const trimmedLine = line.trim();
+                    
+                    // Look for class/interface/type/enum definition
+                    if (trimmedLine.match(new RegExp(`(class|interface|type|enum)\\s+${className}\\b`))) {
+                        classStartIndex = i;
+                        inClassContext = true;
+                        braceCount = 0;
+                        
+                        // Add some context before the class
+                        const contextStart = Math.max(0, i - 2);
+                        for (let j = contextStart; j < i; j++) {
+                            relevantLines.push(lines[j]);
+                        }
+                    }
+                    
+                    if (inClassContext) {
+                        relevantLines.push(line);
+                        
+                        // Count braces to determine when class ends
+                        braceCount += (line.match(/\{/g) || []).length;
+                        braceCount -= (line.match(/\}/g) || []).length;
+                        
+                        // If we've closed all braces and we're not at the start, we're done
+                        if (braceCount <= 0 && i > classStartIndex + 1) {
+                            // Add a few more lines for context
+                            for (let j = i + 1; j < Math.min(lines.length, i + 3); j++) {
+                                relevantLines.push(lines[j]);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // If no class definition found, look for any lines containing the class name
+                if (relevantLines.length === 0) {
+                    const classLines = lines.filter(line => {
+                        const lineLower = line.toLowerCase();
+                        const classNameLower = className.toLowerCase();
+                        return lineLower.includes(classNameLower) && 
+                               (line.startsWith('+') || line.startsWith('-') || line.startsWith(' '));
+                    });
+                    
+                    if (classLines.length > 0) {
+                        // Add some context around these lines
+                        const contextLines = [];
+                        lines.forEach((line, index) => {
+                            if (classLines.includes(line)) {
+                                const start = Math.max(0, index - 2);
+                                const end = Math.min(lines.length, index + 3);
+                                for (let i = start; i < end; i++) {
+                                    if (!contextLines.includes(lines[i])) {
+                                        contextLines.push(lines[i]);
+                                    }
+                                }
+                            }
+                        });
+                        return contextLines.join('\n');
+                    }
+                }
+
+                return relevantLines.length > 0 ? relevantLines.join('\n') : null;
+            };
+
+            const classDiff = extractClassDiff(diffData.diffText, selectedNode);
+
+            return (
+                <div className="raw-diff-panel" style={{ marginBottom: '1rem' }}>
+                    <div className="diff-header">
+                        <h3 className="panel-title">
+                            Class Diff: {selectedNode.name || selectedNode.id}
+                            <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#6c757d', marginLeft: '0.5rem' }}>
+                                ({selectedNode.status} - {selectedNode.file})
+                            </span>
+                        </h3>
+                        <button 
+                            className="toggle-btn"
+                            onClick={() => setIsExpanded(!isExpanded)}
+                        >
+                            {isExpanded ? 'Hide' : 'Show'} Class Diff
+                        </button>
+                    </div>
+                    {isExpanded && (
+                        <div className="diff-content">
+                            {classDiff}
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -531,8 +1168,23 @@
 
         // Main App Component
         function App() {
-            const { diffData, analyses, connectionStatus, error, errorType, refresh } = useGitDiffStream();
+            const { diffData, analyses, pendingAnalyses, connectionStatus, error, errorType, refresh } = useGitDiffStream();
             const [isRefreshing, setIsRefreshing] = useState(false);
+            const [selectedClassNode, setSelectedClassNode] = useState(null);
+
+            // Listen for class node selection events
+            useEffect(() => {
+                const handleClassNodeSelected = (event) => {
+                    console.log('Class node selected:', event.detail);
+                    setSelectedClassNode(event.detail);
+                };
+
+                window.addEventListener('classNodeSelected', handleClassNodeSelected);
+                
+                return () => {
+                    window.removeEventListener('classNodeSelected', handleClassNodeSelected);
+                };
+            }, []);
 
             const handleRefresh = async () => {
                 setIsRefreshing(true);
@@ -575,21 +1227,25 @@
                             </div>
                         )}
 
-                        {analyses.length === 0 && connectionStatus === 'connected' && !error && (
+                        {analyses.length === 0 && pendingAnalyses.length === 0 && connectionStatus === 'connected' && !error && (
                             <div className="no-changes">
                                 <h3>No changes detected</h3>
                                 <p>Make some changes to your git repository to see analysis results.</p>
                             </div>
                         )}
 
-                        {analyses.length > 0 && (
+                        {(analyses.length > 0 || pendingAnalyses.length > 0) && (
                             <div className="analysis-grid">
                                 {analyses.map((analysis) => (
                                     <AnalysisPanel key={analysis.id} analysis={analysis} />
                                 ))}
+                                {pendingAnalyses.map((pendingAnalysis) => (
+                                    <PlaceholderPanel key={pendingAnalysis.id} pendingAnalysis={pendingAnalysis} />
+                                ))}
                             </div>
                         )}
 
+                        <ClassDiffPanel selectedNode={selectedClassNode} diffData={diffData} />
                         <RawDiffPanel diffData={diffData} />
                     </main>
                 </div>

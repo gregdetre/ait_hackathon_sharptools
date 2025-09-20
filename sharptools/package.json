@@ -4,7 +4,8 @@
     "license": "MIT",
     "description": "Project root scripts for documentation and tooling",
     "scripts": {
-        "chat": "tsx chat-server.ts --host=127.0.0.1 --port=8787",
+        "prechat": "sh -c 'PORT=${PORT:-8787}; PIDS=$(lsof -ti tcp:$PORT); if [ -n \"$PIDS\" ]; then echo \"Killing process(es) on port $PORT: $PIDS\"; kill $PIDS || true; sleep 0.5; PIDS=$(lsof -ti tcp:$PORT); if [ -n \"$PIDS\" ]; then echo \"Force killing: $PIDS\"; kill -9 $PIDS || true; fi; fi'",
+        "chat": "sh -c 'PORT=${PORT:-8787}; HOST=${HOST:-127.0.0.1}; tsx chat-server.ts --host=$HOST --port=$PORT'",
         "git:diff": "tsx git-diff.ts"
     },
     "dependencies": {

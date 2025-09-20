@@ -64,6 +64,18 @@ async function readAllFromStdin(): Promise<string> {
   });
 }
 
+// The constant object id of the empty tree in Git
+const EMPTY_TREE_OID = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+
+async function getFirstParent(commit: string): Promise<string | null> {
+  const { code, stdout } = await runCapture('git', ['rev-list', '--parents', '-n', '1', commit]);
+  if (code !== 0) return null;
+  const parts = stdout.trim().split(/\s+/).filter(Boolean);
+  // stdout is: <commit> [<parent1> <parent2> ...]
+  if (parts.length >= 2) return parts[1];
+  return null;
+}
+
 function languageFromPath(path?: string): string | undefined {
   if (!path) return undefined;
   const ext = extname(path).replace(/^\./, '').toLowerCase();
@@ -470,7 +482,30 @@ class BasicDiffCommand extends Command {
 
   async execute(): Promise<number> {
     try {
-      const diffText = await this.getDiffText();
+      const piped = !process.stdin.isTTY;
+
+      let usedArgs: string[] = [];
+      let baseRefResolved: string | undefined;
+      let headRefResolved: string | undefined;
+      let rangeResolved: string | undefined;
+      let diffText: string;
+
+      if (piped) {
+        diffText = await readAllFromStdin();
+      } else {
+        const buildRes = await this.computeGitInvocation();
+        usedArgs = buildRes.args;
+        baseRefResolved = buildRes.baseRef;
+        headRefResolved = buildRes.headRef;
+        rangeResolved = buildRes.rangeArg;
+
+        const { code, stdout, stderr } = await runCapture('git', usedArgs);
+        if (code !== 0) {
+          throw new Error(stderr || `git ${usedArgs.join(' ')} failed with code ${code}`);
+        }
+        diffText = stripAnsi(stdout);
+      }
+
       const { files, totals, warnings } = parseUnifiedDiff(diffText);
 
       const basic: BasicDiff = {
@@ -479,11 +514,11 @@ class BasicDiffCommand extends Command {
           tool: { name: 'git-diff.ts', version: '1.0.0' },
           cwd: process.cwd(),
           git: {
-            baseRef: this.refA || undefined,
-            headRef: this.refB || undefined,
-            rangeArg: this.commitsRange || undefined,
+            baseRef: baseRefResolved ?? undefined,
+            headRef: headRefResolved ?? undefined,
+            rangeArg: rangeResolved ?? (this.commitsRange || undefined),
             staged: this.staged,
-            args: this.buildGitArgs(),
+            args: usedArgs.length ? usedArgs : this.buildGitArgs(),
             colorMode: this.color as ColorMode,
             wordDiff: this.wordDiff,
             nameOnly: this.nameOnly,
@@ -534,23 +569,93 @@ class BasicDiffCommand extends Command {
     const rangeFromFlag = (this.commitsRange || '').trim();
     const havePositional = Boolean((this.refA || '').trim() || (this.refB || '').trim());
     if (rangeFromFlag) {
-      args.push(rangeFromFlag);
+      // If a single commit (no range operator) was provided, expand to parent..commit for display purposes
+      if (!rangeFromFlag.includes('..')) {
+        args.push(`${rangeFromFlag}^..${rangeFromFlag}`);
+      } else {
+        args.push(rangeFromFlag);
+      }
     } else if (havePositional) {
       if (this.refA && this.refB) args.push(`${this.refA}..${this.refB}`);
-      else if (this.refA) args.push(this.refA);
+      else if (this.refA) args.push(`${this.refA}^..${this.refA}`);
     } else if (this.staged) {
       args.push('--cached');
     }
     return args;
   }
 
+  private async computeGitInvocation(): Promise<{ args: string[]; baseRef?: string; headRef?: string; rangeArg?: string }> {
+    const args: string[] = ['diff'];
+
+    // Color handling
+    if (this.color === 'always') args.push('--color=always');
+    else if (this.color === 'never') args.push('--no-color');
+    else args.push('--color');
+
+    if (this.wordDiff) args.push('--word-diff');
+    if (this.stat) args.push('--stat');
+    if (this.nameOnly) args.push('--name-only');
+    if (this.unified) args.push(`-U${this.unified}`);
+
+    let baseRef: string | undefined;
+    let headRef: string | undefined;
+    let rangeArg: string | undefined;
+
+    const rangeFromFlag = (this.commitsRange || '').trim();
+    const havePositional = Boolean((this.refA || '').trim() || (this.refB || '').trim());
+
+    if (rangeFromFlag) {
+      if (!rangeFromFlag.includes('..')) {
+        // Single commit provided via --commits
+        headRef = rangeFromFlag;
+        const parent = await getFirstParent(rangeFromFlag);
+        if (parent) {
+          baseRef = parent;
+          rangeArg = `${parent}..${rangeFromFlag}`;
+          args.push(rangeArg);
+        } else {
+          // Root commit – diff against empty tree
+          rangeArg = `${EMPTY_TREE_OID}..${rangeFromFlag}`;
+          args.push(rangeArg);
+        }
+      } else {
+        rangeArg = rangeFromFlag;
+        args.push(rangeFromFlag);
+        const m = rangeFromFlag.match(/^([^.]*)\.\.\.?([^.]*)$/);
+        if (m) { baseRef = m[1] || undefined; headRef = m[2] || undefined; }
+      }
+    } else if (havePositional) {
+      if (this.refA && this.refB) {
+        baseRef = this.refA;
+        headRef = this.refB;
+        rangeArg = `${this.refA}..${this.refB}`;
+        args.push(rangeArg);
+      } else if (this.refA) {
+        headRef = this.refA;
+        const parent = await getFirstParent(this.refA);
+        if (parent) {
+          baseRef = parent;
+          rangeArg = `${parent}..${this.refA}`;
+          args.push(rangeArg);
+        } else {
+          rangeArg = `${EMPTY_TREE_OID}..${this.refA}`;
+          args.push(rangeArg);
+        }
+      }
+    } else if (this.staged) {
+      args.push('--cached');
+    }
+
+    return { args, baseRef, headRef, rangeArg };
+  }
+
   private async getDiffText(): Promise<string> {
-    // Prefer STDIN when piped
+    // Backward-compatible method; prefer computeGitInvocation in execute()
     if (!process.stdin.isTTY) {
       const piped = await readAllFromStdin();
       return stripAnsi(piped);
     }
-    const args = this.buildGitArgs();
+    const { args } = await this.computeGitInvocation();
     const { code, stdout, stderr } = await runCapture('git', args);
     if (code !== 0) {
       throw new Error(stderr || `git ${args.join(' ')} failed with code ${code}`);

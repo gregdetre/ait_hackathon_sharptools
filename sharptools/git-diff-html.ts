@@ -45,6 +45,21 @@ async function runCapture(command: string, args: string[], options: { cwd?: stri
   });
 }
 
+const EMPTY_TREE_OID = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+
+async function getFirstParent(commit: string): Promise<string | null> {
+  return await new Promise((resolvePromise) => {
+    const child = spawn('git', ['rev-list', '--parents', '-n', '1', commit], { stdio: ['ignore', 'pipe', 'ignore'] });
+    let out = '';
+    child.stdout.on('data', c => out += String(c));
+    child.on('close', () => {
+      const parts = out.trim().split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) resolvePromise(parts[1]); else resolvePromise(null);
+    });
+    child.on('error', () => resolvePromise(null));
+  });
+}
+
 class GitDiffHtmlCommand extends Command {
   static paths = [["git-diff-html"], Command.Default];
 
@@ -129,10 +144,20 @@ class GitDiffHtmlCommand extends Command {
     const rangeFromFlag = (this.commitsRange || '').trim();
     const havePositional = Boolean((this.refA || '').trim() || (this.refB || '').trim());
     if (rangeFromFlag) {
-      args.push(rangeFromFlag);
+      if (!rangeFromFlag.includes('..')) {
+        const parent = await getFirstParent(rangeFromFlag);
+        if (parent) args.push(`${parent}..${rangeFromFlag}`);
+        else args.push(`${EMPTY_TREE_OID}..${rangeFromFlag}`);
+      } else {
+        args.push(rangeFromFlag);
+      }
     } else if (havePositional) {
       if (this.refA && this.refB) args.push(`${this.refA}..${this.refB}`);
-      else if (this.refA) args.push(this.refA);
+      else if (this.refA) {
+        const parent = await getFirstParent(this.refA);
+        if (parent) args.push(`${parent}..${this.refA}`);
+        else args.push(`${EMPTY_TREE_OID}..${this.refA}`);
+      }
     } else if (this.staged) {
       args.push('--cached');
     }

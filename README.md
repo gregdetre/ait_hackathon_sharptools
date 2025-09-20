@@ -29,6 +29,10 @@ npm run diff:enrich
 ```bash
 npm run diff:rich
 ```
+Alternatively, LLM‑enhanced rich diff (requires `ANTHROPIC_API_KEY`):
+```bash
+npm run diff:rich:llm
+```
 4) Render HTML
 ```bash
 npm run diff:html

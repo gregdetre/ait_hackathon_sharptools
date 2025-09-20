@@ -74,7 +74,8 @@ export class GitMonitor extends EventEmitter {
       throw new Error('Watch folder not configured');
     }
 
-    const watchPath = this.config.watchFolder;
+    // Resolve relative paths relative to the current working directory
+    const watchPath = path.resolve(this.config.watchFolder);
     if (!fs.existsSync(watchPath)) {
       throw new Error(`Watch folder not found: ${watchPath}`);
     }
@@ -127,7 +128,7 @@ export class GitMonitor extends EventEmitter {
   private async getCurrentGitDiff(): Promise<GitDiffData> {
     return new Promise((resolve, reject) => {
       const cwd = this.config.mode === 'folder-watch' 
-        ? this.config.watchFolder 
+        ? path.resolve(this.config.watchFolder)
         : process.cwd();
 
       const gitProcess = spawn('git', ['diff', '--color=never'], { 

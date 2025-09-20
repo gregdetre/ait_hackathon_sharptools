@@ -1,3 +1,71 @@
+# macOS
+.DS_Store
+
+# Environment files
+.env
+.env.*
+!.env.example
+.env.local
+.envrc
+
+# Node.js
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+# Build outputs / caches
+dist/
+build/
+out/
+.cache/
+.parcel-cache/
+.turbo/
+.next/
+.vercel/
+
+# Logs
+*.log
+logs/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.so
+.venv/
+venv/
+build/
+dist/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.egg-info/
+.eggs/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db
+
+# Project
 claude-exports
-node_modules
-dist
+gjdutils/

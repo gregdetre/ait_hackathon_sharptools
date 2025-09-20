@@ -75,6 +75,37 @@ Options:
 - `-l, --list`: List available sessions without exporting
 - `-a, --all`: Export sessions for all discovered projects
 
+### Export for a specific folder only
+
+To export conversations only for a given folder (e.g., this repository), point `--project` at that folder. If you run the command from the folder itself, the default already targets the current working directory.
+
+```bash
+# From the project folder (defaults to current directory)
+npm run build && npm start
+
+# Or explicitly specify the folder
+claude-export --project "/absolute/path/to/your/project" --output ./claude-exports
+
+# Example for the current shell location
+claude-export --project "$(pwd)" --output ./claude-exports
+```
+
+#### Example: Export this repository only
+
+```bash
+# Explicitly target this repo (macOS example)
+claude-export \
+  --project "/Users/greg/Dropbox/dev/experim/ait_hackathon_sharptools" \
+  --output "./claude-exports"
+
+# Example result (files created under ./claude-exports):
+# 4bef4c1c-eac1-4688-8157-efff5dbebb6d.json
+# 72156ca0-36a9-4741-a963-3441c3afc878.json
+# a3b04120-129f-4a25-b534-2a09dd334bf7.json
+# fb6dbebb-8a3f-4e77-92fa-9aaece2c9019.json
+# export-summary.json
+```
+
 ### Exported data format
 
 Per-session JSON (`SessionData`):

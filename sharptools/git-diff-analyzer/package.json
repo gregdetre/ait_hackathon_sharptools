@@ -10,14 +10,15 @@
     "build": "echo 'No build step needed for v1'"
   },
   "dependencies": {
-    "ws": "^8.14.2",
     "chokidar": "^3.5.3",
-    "openai": "^4.68.4"
+    "openai": "^4.68.4",
+    "repomix": "^1.5.0",
+    "ws": "^8.14.2"
   },
   "devDependencies": {
-    "tsx": "^4.0.0",
-    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
     "@types/ws": "^8.5.8",
-    "@types/node": "^20.0.0"
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
   }
 }

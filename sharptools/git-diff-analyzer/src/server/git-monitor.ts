@@ -4,16 +4,19 @@ import * as path from 'path';
 import chokidar from 'chokidar';
 import { EventEmitter } from 'events';
 import { GitMonitorConfig, GitDiffData } from '../shared/types';
+import { RepomixService } from './repomix-service';
 
 export class GitMonitor extends EventEmitter {
   private config: GitMonitorConfig;
   private watcher?: chokidar.FSWatcher;
   private pollTimer?: NodeJS.Timeout;
   private lastDiffHash: string = '';
+  private repomixService: RepomixService;
 
   constructor(config: GitMonitorConfig) {
     super();
     this.config = config;
+    this.repomixService = new RepomixService();
   }
 
   async start(): Promise<void> {
@@ -126,7 +129,7 @@ export class GitMonitor extends EventEmitter {
   }
 
   private async getCurrentGitDiff(): Promise<GitDiffData> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const cwd = this.config.mode === 'folder-watch' 
         ? path.resolve(this.config.watchFolder)
         : process.cwd();
@@ -147,10 +150,41 @@ export class GitMonitor extends EventEmitter {
         stderr += data.toString();
       });
 
-      gitProcess.on('close', (code) => {
+      gitProcess.on('close', async (code) => {
         if (code !== 0 && stderr) {
           reject(new Error(`Git diff failed: ${stderr}`));
           return;
+        }
+
+        // Check if diff is too large
+        if (this.repomixService.isDiffTooLarge(stdout)) {
+          console.log(`⚠️ Git diff too large (${stdout.length} characters), rejecting`);
+          const diffData: GitDiffData = {
+            diffText: stdout,
+            timestamp: new Date(),
+            fileCount: this.countFiles(stdout),
+            additions: this.countAdditions(stdout),
+            deletions: this.countDeletions(stdout)
+          };
+          // Emit a special event for large diffs
+          this.emit('diff-too-large', diffData);
+          resolve(diffData);
+          return;
+        }
+
+        // Try to generate repomix output
+        let repomixOutput: string | undefined;
+        let repomixSize: number | undefined;
+        
+        try {
+          const repomixResult = await this.repomixService.generateRepomixOutput(cwd);
+          if (repomixResult) {
+            repomixOutput = repomixResult.output;
+            repomixSize = repomixResult.size;
+            console.log(`✅ Repomix output included (${repomixSize} characters)`);
+          }
+        } catch (error) {
+          console.error('Failed to generate repomix output:', error);
         }
 
         const diffData: GitDiffData = {
@@ -158,7 +192,9 @@ export class GitMonitor extends EventEmitter {
           timestamp: new Date(),
           fileCount: this.countFiles(stdout),
           additions: this.countAdditions(stdout),
-          deletions: this.countDeletions(stdout)
+          deletions: this.countDeletions(stdout),
+          repomixOutput,
+          repomixSize
         };
 
         resolve(diffData);

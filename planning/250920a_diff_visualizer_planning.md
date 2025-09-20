@@ -75,6 +75,7 @@ Build a value-focused diff visualizer that:
 ### Stage: Integration and CLI
 - [x] Add npm scripts:
   - [x] `diff:json` → generate `basic-diff.json`
+  - [x] `diff:enrich` → generate `enrichment.json`
   - [x] `diff:rich` → generate `rich-diff.json`
   - [x] `diff:html` → generate `rich-diff.html` from `rich-diff.json`
 - [x] Wire options: context radius, model/provider, prompt version (file snapshot limits TBD)
@@ -83,6 +84,7 @@ Build a value-focused diff visualizer that:
 - [x] Type checking (`tsc --noEmit`) after each stage (no errors in MVP files)
 - [x] Linting (align with repo conventions)
 - [x] Manual spot checks on representative diffs (generated out/*.json, out/*.html)
+  - [x] End-to-end run produced: `out/basic-diff.json`, `out/enrichment.json`, `out/rich-diff.json`, `out/rich-diff.html`
 
 ### Stage: Documentation and Diagrams
 - [x] Keep `docs/reference/DATA_STRUCTURES.md` aligned with schema evolution

@@ -93,8 +93,8 @@ Please update the file at $VISUALIZATION_FILE by:
 
 Keep the existing HTML structure and JavaScript intact. Only update the placeholder content and data."
 
-        # Call Claude in headless mode
-        claude -p "$PROMPT" 2>/dev/null
+        # Call Claude in headless mode with skip permissions flag
+        claude --dangerously-skip-permissions -p "$PROMPT" 2>/dev/null
 
         if [ $? -eq 0 ]; then
             echo "  ✅ Visualization updated successfully!"

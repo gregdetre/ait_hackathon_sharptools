@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "dev": "ts-node sharptools/claude-conversation-exporter/index.ts",
     "export": "npm run build && npm start"
   },
   "keywords": ["claude", "cli", "export", "conversation", "json"],

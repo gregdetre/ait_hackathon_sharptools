@@ -81,6 +81,7 @@ class DiffPipelineCommand extends Command {
   // LLM controls (only used when --use-llm)
   model = Option.String('--model', 'claude-3-opus-20240229');
   promptVersion = Option.String('--prompt-version', 'v1-llm');
+  filterByExtensions = Option.String('--filter-by-extensions', { required: false });
 
   async execute(): Promise<number> {
     const prefix = dtStamp();
@@ -127,6 +128,7 @@ class DiffPipelineCommand extends Command {
             '-e', enrichPath,
             '--model', this.model,
             '--prompt-version', this.promptVersion,
+            ...(this.filterByExtensions ? ['--filter-by-extensions', String(this.filterByExtensions)] : []),
             '-o', richPath,
           ]
         : [

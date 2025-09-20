@@ -299,6 +299,9 @@ export function parseUnifiedDiff(diffText: string, options: ParseOptions = {}): 
           break;
         }
 
+        // Preserve raw patch content for this file
+        current.rawLines.push(l);
+
         // Handle "\\ No newline at end of file"
         if (l === '\\ No newline at end of file') {
           const last = hunk.lines[hunk.lines.length - 1];
@@ -482,7 +485,13 @@ class BasicDiffCommand extends Command {
 
   async execute(): Promise<number> {
     try {
-      const piped = !process.stdin.isTTY;
+      const pipedCandidate = !process.stdin.isTTY;
+      const hasExplicitSelection = Boolean(
+        (this.commitsRange || '').trim() ||
+        (this.refA || '').trim() ||
+        (this.refB || '').trim() ||
+        this.staged
+      );
 
       let usedArgs: string[] = [];
       let baseRefResolved: string | undefined;
@@ -490,9 +499,26 @@ class BasicDiffCommand extends Command {
       let rangeResolved: string | undefined;
       let diffText: string;
 
-      if (piped) {
-        diffText = await readAllFromStdin();
+      if (pipedCandidate && !hasExplicitSelection) {
+        const pipedData = await readAllFromStdin();
+        if (pipedData.trim().length > 0) {
+          diffText = pipedData;
+        } else {
+          // Empty STDIN despite non-TTY; fall back to invoking git directly
+          const buildRes = await this.computeGitInvocation();
+          usedArgs = buildRes.args;
+          baseRefResolved = buildRes.baseRef;
+          headRefResolved = buildRes.headRef;
+          rangeResolved = buildRes.rangeArg;
+
+          const { code, stdout, stderr } = await runCapture('git', usedArgs);
+          if (code !== 0) {
+            throw new Error(stderr || `git ${usedArgs.join(' ')} failed with code ${code}`);
+          }
+          diffText = stripAnsi(stdout);
+        }
       } else {
+        // Prefer explicit selection (commits/refA/refB/staged) over piped detection
         const buildRes = await this.computeGitInvocation();
         usedArgs = buildRes.args;
         baseRefResolved = buildRes.baseRef;

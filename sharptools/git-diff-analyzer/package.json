@@ -1,0 +1,23 @@
+{
+  "name": "git-diff-analyzer",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Real-time git diff analysis with AI insights",
+  "scripts": {
+    "start": "tsx src/server/index.ts",
+    "dev": "tsx watch src/server/index.ts",
+    "build": "echo 'No build step needed for v1'"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "chokidar": "^3.5.3",
+    "openai": "^4.68.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "@types/ws": "^8.5.8",
+    "@types/node": "^20.0.0"
+  }
+}

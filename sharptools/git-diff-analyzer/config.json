@@ -1,0 +1,20 @@
+{
+  "server": {
+    "port": 8788,
+    "host": "127.0.0.1"
+  },
+  "gitMonitor": {
+    "mode": "folder-watch",
+    "watchFolder": "/workspaces/wrapper/ait_hackathon_sharptools",
+    "staticFilePath": null,
+    "pollInterval": 2000
+  },
+  "llm": {
+    "enabled": false,
+    "promptsFolder": "./prompts"
+  },
+  "ui": {
+    "showRawDiff": true,
+    "refreshInterval": 1000
+  }
+}

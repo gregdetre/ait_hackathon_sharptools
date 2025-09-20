@@ -1,0 +1,26 @@
+{
+  "name": "claude-conversation-exporter",
+  "version": "1.0.0",
+  "description": "Export Claude Code conversations to JSON using Clipanion CLI",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "export": "npm run build && npm start"
+  },
+  "keywords": ["claude", "cli", "export", "conversation", "json"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "clipanion": "^4.0.0-rc.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

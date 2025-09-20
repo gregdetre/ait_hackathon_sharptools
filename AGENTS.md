@@ -10,6 +10,8 @@ Sharp Tools helps programmers use AI-assisted tools (like Claude Code and Cursor
 
 ### Development Commands (project root)
 
+**Atomic commit rule**: Always chain `git reset && git add ... && git commit` in a single command to ensure only this agent's work is committed, as per `docs/instructions/GIT_COMMIT_CHANGES.md`.
+
 ```bash
 # Install dependencies (root)
 npm install
@@ -79,9 +81,13 @@ See `docs/reference/GIT_DIFF_CLI_REFERENCE.md` for full reference.
 
 
 - **docs/reference/**: Documentation
-  - `PRODUCT_VISION_FEATURES.md`: Product vision and feature planning
+  - [PRODUCT_VISION_FEATURES.md](docs/reference/PRODUCT_VISION_FEATURES.md): Product vision and feature planning
+  - [DATA_STRUCTURES.md](docs/reference/DATA_STRUCTURES.md): Diff schemas overview
   - `DIAGRAMS_MERMAID_GENERATION_REFERENCE.md`: Mermaid diagram generation guide
   - `libraries/VERCEL_AI_SDK.md`: Vercel AI SDK reference
+
+- **planning/**: Planning
+  - [250920a_diff_visualizer_planning.md](planning/250920a_diff_visualizer_planning.md): Diff visualizer planning and implementation guide
 
 ### Key Technologies
 
